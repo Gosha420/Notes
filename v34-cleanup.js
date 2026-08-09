@@ -1,75 +1,15 @@
 (()=>{
 'use strict';
+const NOTE_KEY='goshaNoteV21',BACKUP_KEY='goshaPreDemoBackupV35',DEMO_FLAG='goshaDemoActiveV35';
 const note=()=>document.querySelector('#note');
 const style=document.createElement('style');
-style.textContent=`
-:root{--v34-line:rgba(114,255,116,.13);--v34-soft:rgba(114,255,116,.055);--v34-text:#e8eee8;--v34-muted:rgba(220,235,220,.46)}
-.panel{background:linear-gradient(180deg,rgba(6,10,6,.98),rgba(1,3,1,.99))!important;border-color:var(--v34-line)!important;border-radius:24px!important;box-shadow:0 14px 42px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.015)!important;overflow:hidden}
-.panelHead{padding-top:18px!important;padding-bottom:16px!important;border-bottom:1px solid rgba(114,255,116,.095)!important;background:linear-gradient(180deg,rgba(255,255,255,.014),transparent)!important}
-.panelHead h2,.panelHead h3{letter-spacing:-.02em!important}
-#note{background:#000!important;color:var(--v34-text)!important;border:0!important;box-shadow:none!important;line-height:1.62!important;padding:28px 28px 34px!important;caret-color:#8cff72!important;letter-spacing:.005em!important}
-#note::placeholder{color:rgba(220,235,220,.25)!important}
-#saveStatus{background:transparent!important;border-color:rgba(114,255,116,.17)!important;color:rgba(190,255,190,.56)!important;box-shadow:none!important;font-size:.82em!important;letter-spacing:.045em!important}
-.btn,.navBtn,.bottomNav button{background:rgba(255,255,255,.018)!important;border-color:rgba(114,255,116,.17)!important;color:rgba(228,240,228,.78)!important;box-shadow:none!important}
-.btn:hover,.navBtn:hover,.bottomNav button:hover{background:rgba(114,255,116,.045)!important}
-.btn.primary,#calcBtn{background:rgba(114,255,116,.065)!important;border-color:rgba(114,255,116,.28)!important;color:#dfffe0!important}
-.bottomNav{background:rgba(2,4,2,.96)!important;border-color:rgba(114,255,116,.12)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;box-shadow:0 -12px 35px rgba(0,0,0,.32)!important}
-.setting,.stat,.card{border-color:rgba(114,255,116,.11)!important;background:rgba(255,255,255,.012)!important;box-shadow:none!important}
-`;
-document.head.appendChild(style);
-
-function removeInstruction(){
- for(const el of document.querySelectorAll('p,div,small,footer,span')){
-  const t=(el.textContent||'').trim();
-  if(t.startsWith('Product headings such as')||t.includes('define starting stock and cost. Heading values are excluded')) el.remove();
- }
-}
-
-function suppressSavedPopup(){
- const toast=document.querySelector('#toast');
- if(!toast)return;
- const clean=()=>{
-  const t=(toast.textContent||'').trim().toLowerCase();
-  if(t==='saved locally'||t==='saved local'||t==='saved' || (t.includes('saved')&&t.includes('local'))){
-   toast.classList.remove('show');
-   toast.style.opacity='0';
-   toast.style.pointerEvents='none';
-   setTimeout(()=>{toast.style.opacity='';toast.style.pointerEvents=''},180);
-  }
- };
- new MutationObserver(clean).observe(toast,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});
- clean();
-}
-
-function addResultGap(){
- const n=note(); if(!n)return;
- let lines=n.value.split(/\r?\n/);
- for(let i=0;i<lines.length;i++){
-  if(/^\s*Total:\s*/i.test(lines[i])){
-   let j=i-1;
-   while(j>=0&&lines[j].trim()==='')j--;
-   const blanks=i-j-1;
-   if(blanks!==1){
-    lines.splice(j+1,blanks,'');
-    i=j+2;
-   }
-  }
- }
- const next=lines.join('\n');
- if(next!==n.value){
-  const pos=n.selectionStart;
-  n.value=next;
-  localStorage.setItem('goshaNoteV21',next);
-  n.dispatchEvent(new Event('input',{bubbles:true}));
-  try{n.setSelectionRange(Math.min(pos,next.length),Math.min(pos,next.length))}catch(_){ }
- }
-}
-
-function wireCalcGap(){
- const b=document.querySelector('#calcBtn');if(!b)return;
- b.addEventListener('click',()=>setTimeout(addResultGap,0));
-}
-
-function boot(){removeInstruction();suppressSavedPopup();wireCalcGap();setTimeout(removeInstruction,250);setTimeout(removeInstruction,1200)}
+style.textContent=`:root{--v35-line:rgba(114,255,116,.13);--v35-text:#e8eee8}.panel{background:linear-gradient(180deg,rgba(6,10,6,.98),rgba(1,3,1,.99))!important;border-color:var(--v35-line)!important;border-radius:24px!important;box-shadow:0 14px 42px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.015)!important;overflow:hidden}.panelHead{padding-top:18px!important;padding-bottom:16px!important;border-bottom:1px solid rgba(114,255,116,.095)!important;background:linear-gradient(180deg,rgba(255,255,255,.014),transparent)!important}#note{background:#000!important;color:var(--v35-text)!important;border:0!important;box-shadow:none!important;line-height:1.62!important;padding:28px 28px 34px!important;caret-color:#8cff72!important;letter-spacing:.005em!important}#note::placeholder{color:rgba(220,235,220,.25)!important}#saveStatus{background:transparent!important;border-color:rgba(114,255,116,.17)!important;color:rgba(190,255,190,.56)!important;box-shadow:none!important;font-size:.82em!important;letter-spacing:.045em!important}.btn,.navBtn,.bottomNav button{background:rgba(255,255,255,.018)!important;border-color:rgba(114,255,116,.17)!important;color:rgba(228,240,228,.78)!important;box-shadow:none!important}.btn.primary,#calcBtn{background:rgba(114,255,116,.065)!important;border-color:rgba(114,255,116,.28)!important;color:#dfffe0!important}.bottomNav{background:rgba(2,4,2,.96)!important;border-color:rgba(114,255,116,.12)!important;backdrop-filter:blur(16px)!important;-webkit-backdrop-filter:blur(16px)!important;box-shadow:0 -12px 35px rgba(0,0,0,.32)!important}.setting,.stat,.card{border-color:rgba(114,255,116,.11)!important;background:rgba(255,255,255,.012)!important;box-shadow:none!important}#restorePreDemo{margin-top:10px!important}`;document.head.appendChild(style);
+function saveNow(){const n=note();if(!n)return;try{localStorage.setItem(NOTE_KEY,n.value);localStorage.setItem('goshaNote',n.value)}catch(_){}}
+function removeInstruction(){for(const el of document.querySelectorAll('p,div,small,footer,span')){const t=(el.textContent||'').trim();if(t.startsWith('Product headings such as')||t.includes('define starting stock and cost. Heading values are excluded'))el.remove()}}
+function suppressSavedPopup(){const toast=document.querySelector('#toast');if(!toast)return;const clean=()=>{const t=(toast.textContent||'').trim().toLowerCase();if(t==='saved locally'||t==='saved local'||t==='saved'||(t.includes('saved')&&t.includes('local'))){toast.classList.remove('show');toast.style.opacity='0';setTimeout(()=>toast.style.opacity='',180)}};new MutationObserver(clean).observe(toast,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']});clean()}
+function addResultGap(){const n=note();if(!n)return;let lines=n.value.split(/\r?\n/);for(let i=0;i<lines.length;i++){if(/^\s*Total:\s*/i.test(lines[i])){let j=i-1;while(j>=0&&lines[j].trim()==='')j--;const blanks=i-j-1;if(blanks!==1){lines.splice(j+1,blanks,'');i=j+2}}}const next=lines.join('\n');if(next!==n.value){const pos=n.selectionStart;n.value=next;saveNow();try{n.setSelectionRange(Math.min(pos,next.length),Math.min(pos,next.length))}catch(_){}}}
+function wireAutosave(){const n=note();if(!n||n.dataset.v35Autosave)return;n.dataset.v35Autosave='1';let timer;n.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(saveNow,80)},{passive:true});n.addEventListener('change',saveNow);n.addEventListener('blur',saveNow);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveNow()});window.addEventListener('pagehide',saveNow);window.addEventListener('beforeunload',saveNow)}
+function wireDemoRestore(){const n=note();if(!n)return;const demo=document.querySelector('#demoBtnV24,#demoBtn');if(demo&&!demo.dataset.v35Backup){demo.dataset.v35Backup='1';demo.addEventListener('click',()=>{try{localStorage.setItem(BACKUP_KEY,n.value);localStorage.setItem(DEMO_FLAG,'1')}catch(_){}},{capture:true})}const grid=document.querySelector('#settingsView .settingsGrid');if(!grid||document.querySelector('#restorePreDemo'))return;const card=document.createElement('div');card.className='setting';card.id='restorePreDemoCard';card.innerHTML='<h3>Previous notebook</h3><p>Return to the notebook saved immediately before demo mode.</p><button class="btn" id="restorePreDemo">Restore previous</button>';grid.appendChild(card);const btn=card.querySelector('#restorePreDemo');const refresh=()=>{let has=false;try{has=localStorage.getItem(BACKUP_KEY)!==null}catch(_){}card.style.display=has?'':'none'};btn.addEventListener('click',()=>{const prev=localStorage.getItem(BACKUP_KEY);if(prev===null)return;n.value=prev;saveNow();localStorage.removeItem(DEMO_FLAG);n.dispatchEvent(new Event('input',{bubbles:true}));refresh();const toast=document.querySelector('#toast');if(toast){toast.textContent='Previous notebook restored';toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),1100)}});refresh()}
+function boot(){removeInstruction();suppressSavedPopup();wireAutosave();wireDemoRestore();const calc=document.querySelector('#calcBtn');if(calc)calc.addEventListener('click',()=>setTimeout(()=>{addResultGap();saveNow()},0));setTimeout(()=>{removeInstruction();wireDemoRestore()},250);setTimeout(removeInstruction,1000)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
