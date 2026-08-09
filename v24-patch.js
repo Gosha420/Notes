@@ -15,6 +15,7 @@ const pairs=text=>[...text.matchAll(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g)].
 const answerRow=line=>/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left|Smoked)\s*:/i.test(line);
 function toast(msg){const el=$('#toast');if(!el)return;el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1300)}
 function persist(note){localStorage.setItem(NOTE_KEY,note.value);const status=$('#saveStatus');if(status)status.textContent='LOCAL · SAVED';note.dispatchEvent(new Event('input',{bubbles:true}))}
+function pulseCalc(){const b=$('#calcBtn');if(!b)return;b.classList.remove('calcPulse');void b.offsetWidth;b.classList.add('calcPulse');setTimeout(()=>b.classList.remove('calcPulse'),620)}
 function calculateIntoNotebook(){
  const note=$('#note');if(!note)return;const lines=note.value.split(/\r?\n/);const header=/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/;const blocks=[];
  for(let i=0;i<lines.length;i++){const h=lines[i].trim().match(header);if(h&&/[A-Za-zÀ-ž]/.test(h[1]))blocks.push({start:i,end:lines.length,acquired:+h[2]})}
@@ -22,23 +23,40 @@ function calculateIntoNotebook(){
  for(let b=blocks.length-1;b>=0;b--){const block=blocks[b],body=out.slice(block.start+1,block.end);let sold=0,earned=0,smoked=0,smokedLine=null;
   for(const line of body){const used=line.trim().match(/^(?:smoked|used)\s*:?\s*(\d+(?:\.\d+)?)/i);if(used){smoked=+used[1];if(smokedLine===null)smokedLine=line;continue}if(answerRow(line))continue;const tx=pairs(line);sold+=tx.reduce((a,x)=>a+x.qty,0);earned+=tx.reduce((a,x)=>a+x.price,0)}
   const left=Math.max(0,block.acquired-sold-smoked),cleaned=body.filter(line=>!answerRow(line));while(cleaned.length&&cleaned[cleaned.length-1].trim()==='')cleaned.pop();const answers=[`Total: €${fmt(earned)}`,`Total sold: ${fmt(sold)}`,`Left: ${fmt(left)}`,smokedLine??`Smoked: ${fmt(smoked)}`],gap=b<blocks.length-1?['','']:[];out.splice(block.start,block.end-block.start,out[block.start],...cleaned,...answers,...gap)}
- note.value=out.join('\n');persist(note);toast('Calculated')
+ note.value=out.join('\n');persist(note);pulseCalc();toast('Calculated')
 }
 function installLaunchPolish(){
- const style=document.createElement('style');style.id='gosha-v28-polish';style.textContent=`
+ const style=document.createElement('style');style.id='gosha-v29-polish';style.textContent=`
  html,body,.app{background:#000!important}
- .hero{isolation:isolate;background:#000!important;box-shadow:0 24px 80px rgba(69,255,35,.06);transition:height 1.18s cubic-bezier(.16,.84,.2,1),min-height 1.18s cubic-bezier(.16,.84,.2,1)!important}
- .hero:before{filter:saturate(1.13) contrast(1.08) brightness(.9)!important;animation:goshaBreath 2.25s cubic-bezier(.2,.7,.2,1) both;will-change:transform,filter,background-size,background-position!important}
- .hero:after{background:radial-gradient(circle at 50% 45%,rgba(119,255,42,.045),transparent 43%),linear-gradient(to bottom,rgba(0,0,0,.02) 45%,#000 98%)!important;transition:opacity .8s ease!important}
- .app.revealed .hero:before{filter:saturate(1.18) contrast(1.1) brightness(.97)!important;animation:none!important}
- @keyframes goshaBreath{0%{transform:scale(.965);filter:saturate(.92) contrast(1.02) brightness(.72)}55%{transform:scale(1.015);filter:saturate(1.12) contrast(1.07) brightness(.94)}100%{transform:scale(1.035);filter:saturate(1.16) contrast(1.09) brightness(.98)}}
+ .hero{isolation:isolate;background:#000!important;box-shadow:0 24px 80px rgba(69,255,35,.045);transition:height 1.3s cubic-bezier(.16,.9,.18,1),min-height 1.3s cubic-bezier(.16,.9,.18,1)!important}
+ .hero:before{filter:saturate(1.12) contrast(1.07) brightness(.91)!important;animation:goshaBreath 2.45s cubic-bezier(.18,.72,.18,1) both;will-change:transform,filter,background-size,background-position!important}
+ .hero:after{background:radial-gradient(circle at 50% 45%,rgba(119,255,42,.04),transparent 43%),linear-gradient(to bottom,rgba(0,0,0,.01) 45%,#000 98%)!important;transition:opacity .9s ease!important}
+ .app.revealed .hero:before{filter:saturate(1.16) contrast(1.09) brightness(.97)!important;animation:none!important}
+ @keyframes goshaBreath{0%{transform:scale(.97);filter:saturate(.94) contrast(1.02) brightness(.75)}58%{transform:scale(1.012);filter:saturate(1.1) contrast(1.06) brightness(.93)}100%{transform:scale(1.032);filter:saturate(1.15) contrast(1.08) brightness(.98)}}
+ .btn,.navBtn,.bottomNav button{background:rgba(34,255,42,.055)!important;color:rgba(220,255,220,.88)!important;border-color:rgba(74,255,76,.22)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.015)!important;transition:transform .22s cubic-bezier(.2,.8,.2,1),background .22s ease,border-color .22s ease,box-shadow .3s ease!important}
+ .btn:active,.navBtn:active,.bottomNav button:active{transform:scale(.965)!important;background:rgba(50,255,55,.105)!important}
+ .btn.primary,#calcBtn{background:rgba(54,255,59,.09)!important;border-color:rgba(78,255,82,.35)!important;color:#dfffe0!important}
+ @keyframes calcPulse{0%{box-shadow:0 0 0 0 rgba(88,255,92,.34),inset 0 0 0 1px rgba(255,255,255,.02)}55%{box-shadow:0 0 0 10px rgba(88,255,92,0),0 0 22px rgba(78,255,82,.16),inset 0 0 0 1px rgba(255,255,255,.03)}100%{box-shadow:0 0 0 0 rgba(88,255,92,0),inset 0 0 0 1px rgba(255,255,255,.02)}}
+ #calcBtn.calcPulse{animation:calcPulse .62s cubic-bezier(.16,.84,.2,1)}
  .bottomNav{opacity:0!important;transform:translateY(115%)!important;pointer-events:none!important;visibility:hidden!important}
- .app.revealed .bottomNav{opacity:1!important;transform:translateY(0)!important;pointer-events:auto!important;visibility:visible!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;left:12px!important;right:12px!important;width:auto!important;box-sizing:border-box!important;overflow:hidden!important;transition:opacity .34s ease .2s,transform .5s cubic-bezier(.16,.84,.2,1) .14s!important}
+ .app.revealed .bottomNav{opacity:1!important;transform:translateY(0)!important;pointer-events:auto!important;visibility:visible!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;left:12px!important;right:12px!important;width:auto!important;box-sizing:border-box!important;overflow:hidden!important;transition:opacity .38s ease .22s,transform .58s cubic-bezier(.16,.9,.18,1) .16s!important}
  .bottomNav button,.bottomNav .navBtn{min-width:0!important;width:100%!important;box-sizing:border-box!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
- .heroText,.topActions{transition-timing-function:cubic-bezier(.16,.84,.2,1)!important}
+ #tapGateFail{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .65s ease}
+ #tapGateFail.show{opacity:1;pointer-events:auto}
+ #tapGateFail .finger{font-size:min(76vw,520px);line-height:1;filter:grayscale(1) contrast(1.4) brightness(.35);opacity:.16;transform:scale(.94);animation:fingerIn 1.1s cubic-bezier(.16,.9,.18,1) forwards;user-select:none}
+ @keyframes fingerIn{to{transform:scale(1)}}
+ body.gate-failed .app{visibility:hidden!important}
+ .heroText,.topActions{transition-timing-function:cubic-bezier(.16,.9,.18,1)!important}
  @media(prefers-reduced-motion:reduce){.hero:before{animation:none!important}}
  `;document.head.appendChild(style)
 }
-function installUI(){installLaunchPolish();const note=$('#note');if(!note)return;if(!localStorage.getItem(NOTE_KEY)&&!localStorage.getItem('goshaNote'))note.value=demoV24;const oldDemo=$('#demoBtn');if(oldDemo){oldDemo.remove();const grid=$('#settingsView .settingsGrid');if(grid){const card=document.createElement('div');card.className='setting';card.innerHTML='<h3>Demo data</h3><p>Load the Pineapple OG + Blue Dream example notebook.</p><button class="btn" id="demoBtnV24">Load demo</button>';grid.appendChild(card);$('#demoBtnV24').onclick=()=>{if(confirm('Replace the current notebook with demo data?')){note.value=demoV24;persist(note);toast('Demo loaded')}}}}const head=note.closest('.panel')?.querySelector('.panelHead');if(head&&!$('#calcBtn')){const calc=document.createElement('button');calc.className='btn primary';calc.id='calcBtn';calc.textContent='Calc';calc.onclick=calculateIntoNotebook;head.appendChild(calc)}note.placeholder='Example:\nPineapple OG 500/300\n5/60 4.5/50\nSmoked: 12';note.dispatchEvent(new Event('input',{bubbles:true}))}
+function installTapGate(){
+ const app=$('.app'),hero=$('.hero');if(!app||!hero)return;let taps=0,locked=false;const started=performance.now();
+ const count=e=>{if(locked||performance.now()-started>2100)return;taps++;hero.animate([{filter:'brightness(1)'},{filter:'brightness(1.07)'},{filter:'brightness(1)'}],{duration:150,easing:'ease-out'})};
+ hero.addEventListener('pointerdown',count,{passive:true});
+ const fail=document.createElement('div');fail.id='tapGateFail';fail.innerHTML='<div class="finger" aria-hidden="true">🖕</div>';document.body.appendChild(fail);
+ const observer=new MutationObserver(()=>{if(locked||!app.classList.contains('revealed'))return;locked=true;if(taps<3){app.classList.remove('revealed');document.body.classList.add('gate-failed');requestAnimationFrame(()=>fail.classList.add('show'))}});observer.observe(app,{attributes:true,attributeFilter:['class']});
+}
+function installUI(){installLaunchPolish();installTapGate();const note=$('#note');if(!note)return;if(!localStorage.getItem(NOTE_KEY)&&!localStorage.getItem('goshaNote'))note.value=demoV24;const oldDemo=$('#demoBtn');if(oldDemo){oldDemo.remove();const grid=$('#settingsView .settingsGrid');if(grid){const card=document.createElement('div');card.className='setting';card.innerHTML='<h3>Demo data</h3><p>Load the Pineapple OG + Blue Dream example notebook.</p><button class="btn" id="demoBtnV24">Load demo</button>';grid.appendChild(card);$('#demoBtnV24').onclick=()=>{if(confirm('Replace the current notebook with demo data?')){note.value=demoV24;persist(note);toast('Demo loaded')}}}}const head=note.closest('.panel')?.querySelector('.panelHead');if(head&&!$('#calcBtn')){const calc=document.createElement('button');calc.className='btn primary';calc.id='calcBtn';calc.textContent='Calc';calc.onclick=calculateIntoNotebook;head.appendChild(calc)}note.placeholder='Example:\nPineapple OG 500/300\n5/60 4.5/50\nSmoked: 12';note.dispatchEvent(new Event('input',{bubbles:true}))}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});else installUI();
 })();
