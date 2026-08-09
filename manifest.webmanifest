@@ -1,7 +1,7 @@
 {
   "id": "./",
-  "name": " ",
-  "short_name": " ",
+  "name": "GO$HA",
+  "short_name": "GO$HA",
   "description": "Private AMOLED inventory notebook with instant amount/price calculations and local autosave.",
   "start_url": "./index.html",
   "scope": "./",
