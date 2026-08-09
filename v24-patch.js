@@ -26,7 +26,7 @@ function calculateIntoNotebook(){
  note.value=out.join('\n');persist(note);pulseCalc();toast('Calculated')
 }
 function installLaunchPolish(){
- const style=document.createElement('style');style.id='gosha-v29-polish';style.textContent=`
+ const style=document.createElement('style');style.id='gosha-v30-polish';style.textContent=`
  html,body,.app{background:#000!important}
  .hero{isolation:isolate;background:#000!important;box-shadow:0 24px 80px rgba(69,255,35,.045);transition:height 1.3s cubic-bezier(.16,.9,.18,1),min-height 1.3s cubic-bezier(.16,.9,.18,1)!important}
  .hero:before{filter:saturate(1.12) contrast(1.07) brightness(.91)!important;animation:goshaBreath 2.45s cubic-bezier(.18,.72,.18,1) both;will-change:transform,filter,background-size,background-position!important}
@@ -41,20 +41,20 @@ function installLaunchPolish(){
  .bottomNav{opacity:0!important;transform:translateY(115%)!important;pointer-events:none!important;visibility:hidden!important}
  .app.revealed .bottomNav{opacity:1!important;transform:translateY(0)!important;pointer-events:auto!important;visibility:visible!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;left:12px!important;right:12px!important;width:auto!important;box-sizing:border-box!important;overflow:hidden!important;transition:opacity .38s ease .22s,transform .58s cubic-bezier(.16,.9,.18,1) .16s!important}
  .bottomNav button,.bottomNav .navBtn{min-width:0!important;width:100%!important;box-sizing:border-box!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}
- #tapGateFail{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .65s ease}
+ #tapGateFail{position:fixed;inset:0;z-index:99999;background:#000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .7s ease;overflow:hidden}
  #tapGateFail.show{opacity:1;pointer-events:auto}
- #tapGateFail .finger{font-size:min(76vw,520px);line-height:1;filter:grayscale(1) contrast(1.4) brightness(.35);opacity:.16;transform:scale(.94);animation:fingerIn 1.1s cubic-bezier(.16,.9,.18,1) forwards;user-select:none}
- @keyframes fingerIn{to{transform:scale(1)}}
+ #tapGateFail .fingerArt{width:min(86vw,620px);height:auto;max-height:88vh;object-fit:contain;opacity:.72;filter:brightness(1.18) contrast(1.08) saturate(1.15) drop-shadow(0 0 24px rgba(255,198,60,.16)) drop-shadow(0 0 44px rgba(65,255,95,.08));transform:scale(.9);animation:fingerIn 1.05s cubic-bezier(.16,.9,.18,1) forwards;user-select:none;-webkit-user-drag:none}
+ @keyframes fingerIn{0%{transform:scale(.9);opacity:0;filter:brightness(.7) contrast(1.05) saturate(.9)}55%{opacity:.78}100%{transform:scale(1);opacity:.72;filter:brightness(1.18) contrast(1.08) saturate(1.15) drop-shadow(0 0 24px rgba(255,198,60,.16)) drop-shadow(0 0 44px rgba(65,255,95,.08))}}
  body.gate-failed .app{visibility:hidden!important}
  .heroText,.topActions{transition-timing-function:cubic-bezier(.16,.9,.18,1)!important}
- @media(prefers-reduced-motion:reduce){.hero:before{animation:none!important}}
+ @media(prefers-reduced-motion:reduce){.hero:before,.fingerArt{animation:none!important}}
  `;document.head.appendChild(style)
 }
 function installTapGate(){
  const app=$('.app'),hero=$('.hero');if(!app||!hero)return;let taps=0,locked=false;const started=performance.now();
  const count=e=>{if(locked||performance.now()-started>2100)return;taps++;hero.animate([{filter:'brightness(1)'},{filter:'brightness(1.07)'},{filter:'brightness(1)'}],{duration:150,easing:'ease-out'})};
  hero.addEventListener('pointerdown',count,{passive:true});
- const fail=document.createElement('div');fail.id='tapGateFail';fail.innerHTML='<div class="finger" aria-hidden="true">🖕</div>';document.body.appendChild(fail);
+ const fail=document.createElement('div');fail.id='tapGateFail';fail.innerHTML='<img class="fingerArt" src="./finger-ring.webp" alt="" aria-hidden="true" draggable="false">';document.body.appendChild(fail);
  const observer=new MutationObserver(()=>{if(locked||!app.classList.contains('revealed'))return;locked=true;if(taps<3){app.classList.remove('revealed');document.body.classList.add('gate-failed');requestAnimationFrame(()=>fail.classList.add('show'))}});observer.observe(app,{attributes:true,attributeFilter:['class']});
 }
 function installUI(){installLaunchPolish();installTapGate();const note=$('#note');if(!note)return;if(!localStorage.getItem(NOTE_KEY)&&!localStorage.getItem('goshaNote'))note.value=demoV24;const oldDemo=$('#demoBtn');if(oldDemo){oldDemo.remove();const grid=$('#settingsView .settingsGrid');if(grid){const card=document.createElement('div');card.className='setting';card.innerHTML='<h3>Demo data</h3><p>Load the Pineapple OG + Blue Dream example notebook.</p><button class="btn" id="demoBtnV24">Load demo</button>';grid.appendChild(card);$('#demoBtnV24').onclick=()=>{if(confirm('Replace the current notebook with demo data?')){note.value=demoV24;persist(note);toast('Demo loaded')}}}}const head=note.closest('.panel')?.querySelector('.panelHead');if(head&&!$('#calcBtn')){const calc=document.createElement('button');calc.className='btn primary';calc.id='calcBtn';calc.textContent='Calc';calc.onclick=calculateIntoNotebook;head.appendChild(calc)}note.placeholder='Example:\nPineapple OG 500/300\n5/60 4.5/50\nSmoked: 12';note.dispatchEvent(new Event('input',{bubbles:true}))}
