@@ -13,82 +13,20 @@ Smoked: 10`;
 const fmt=n=>new Intl.NumberFormat('en-GB',{maximumFractionDigits:2}).format(Math.round((n+Number.EPSILON)*100)/100);
 const pairs=text=>[...text.matchAll(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g)].map(m=>({qty:+m[1],price:+m[2]}));
 const answerRow=line=>/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left|Smoked)\s*:/i.test(line);
-function toast(msg){
- const el=$('#toast'); if(!el)return;
- el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1300);
-}
-function persist(note){
- localStorage.setItem(NOTE_KEY,note.value);
- const status=$('#saveStatus');if(status)status.textContent='LOCAL · SAVED';
- note.dispatchEvent(new Event('input',{bubbles:true}));
-}
+function toast(msg){const el=$('#toast');if(!el)return;el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1300)}
+function persist(note){localStorage.setItem(NOTE_KEY,note.value);const status=$('#saveStatus');if(status)status.textContent='LOCAL · SAVED';note.dispatchEvent(new Event('input',{bubbles:true}))}
 function calculateIntoNotebook(){
- const note=$('#note');if(!note)return;
- const lines=note.value.split(/\r?\n/);
- const header=/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/;
- const blocks=[];
- for(let i=0;i<lines.length;i++){
-   const h=lines[i].trim().match(header);
-   if(h&&/[A-Za-zÀ-ž]/.test(h[1])) blocks.push({start:i,end:lines.length,acquired:+h[2]});
- }
- for(let i=0;i<blocks.length-1;i++)blocks[i].end=blocks[i+1].start;
- if(!blocks.length){toast('Add a product heading first');return;}
- const out=[...lines];
- for(let b=blocks.length-1;b>=0;b--){
-   const block=blocks[b];
-   const body=out.slice(block.start+1,block.end);
-   let sold=0,earned=0,smoked=0,smokedLine=null;
-   for(const line of body){
-     const t=line.trim();
-     const used=t.match(/^(?:smoked|used)\s*:?\s*(\d+(?:\.\d+)?)/i);
-     if(used){smoked=+used[1];if(smokedLine===null)smokedLine=line;continue;}
-     if(answerRow(line))continue;
-     const tx=pairs(line);
-     sold+=tx.reduce((a,x)=>a+x.qty,0);
-     earned+=tx.reduce((a,x)=>a+x.price,0);
-   }
-   const left=Math.max(0,block.acquired-sold-smoked);
-   const cleaned=body.filter(line=>!answerRow(line));
-   while(cleaned.length&&cleaned[cleaned.length-1].trim()==='')cleaned.pop();
-   const answers=[`Total: €${fmt(earned)}`,`Total sold: ${fmt(sold)}`,`Left: ${fmt(left)}`,smokedLine??`Smoked: ${fmt(smoked)}`];
-   const gap=b<blocks.length-1?['','']:[];
-   const replacement=[out[block.start],...cleaned,...answers,...gap];
-   out.splice(block.start,block.end-block.start,...replacement);
- }
- note.value=out.join('\n');
- persist(note);toast('Calculated');
+ const note=$('#note');if(!note)return;const lines=note.value.split(/\r?\n/);const header=/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/;const blocks=[];
+ for(let i=0;i<lines.length;i++){const h=lines[i].trim().match(header);if(h&&/[A-Za-zÀ-ž]/.test(h[1]))blocks.push({start:i,end:lines.length,acquired:+h[2]})}
+ for(let i=0;i<blocks.length-1;i++)blocks[i].end=blocks[i+1].start;if(!blocks.length){toast('Add a product heading first');return}const out=[...lines];
+ for(let b=blocks.length-1;b>=0;b--){const block=blocks[b],body=out.slice(block.start+1,block.end);let sold=0,earned=0,smoked=0,smokedLine=null;
+  for(const line of body){const used=line.trim().match(/^(?:smoked|used)\s*:?\s*(\d+(?:\.\d+)?)/i);if(used){smoked=+used[1];if(smokedLine===null)smokedLine=line;continue}if(answerRow(line))continue;const tx=pairs(line);sold+=tx.reduce((a,x)=>a+x.qty,0);earned+=tx.reduce((a,x)=>a+x.price,0)}
+  const left=Math.max(0,block.acquired-sold-smoked),cleaned=body.filter(line=>!answerRow(line));while(cleaned.length&&cleaned[cleaned.length-1].trim()==='')cleaned.pop();const answers=[`Total: €${fmt(earned)}`,`Total sold: ${fmt(sold)}`,`Left: ${fmt(left)}`,smokedLine??`Smoked: ${fmt(smoked)}`],gap=b<blocks.length-1?['','']:[];out.splice(block.start,block.end-block.start,out[block.start],...cleaned,...answers,...gap)}
+ note.value=out.join('\n');persist(note);toast('Calculated')
 }
 function installLaunchPolish(){
- const style=document.createElement('style');
- style.id='gosha-v25-polish';
- style.textContent=`
-   html,body,.app{background:#000!important}
-   .bottomNav{opacity:0;transform:translateY(24px);pointer-events:none;visibility:hidden;transition:opacity .42s ease .12s,transform .55s cubic-bezier(.2,.82,.18,1) .12s,visibility 0s linear .58s}
-   .app.revealed .bottomNav{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .42s ease .16s,transform .55s cubic-bezier(.2,.82,.18,1) .16s,visibility 0s}
- `;
- document.head.appendChild(style);
+ const style=document.createElement('style');style.id='gosha-v26-polish';style.textContent=`html,body,.app{background:#000!important}.bottomNav{opacity:0!important;transform:translateY(100%)!important;pointer-events:none!important;visibility:hidden!important}.app.revealed .bottomNav{opacity:1!important;transform:translateY(0)!important;pointer-events:auto!important;visibility:visible!important;display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;left:12px!important;right:12px!important;width:auto!important;box-sizing:border-box!important;overflow:hidden!important;transition:opacity .35s ease .12s,transform .48s cubic-bezier(.2,.82,.18,1) .12s!important}.bottomNav button,.bottomNav .navBtn{min-width:0!important;width:100%!important;box-sizing:border-box!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important}`;document.head.appendChild(style)
 }
-function installUI(){
- installLaunchPolish();
- const note=$('#note');if(!note)return;
- if(!localStorage.getItem(NOTE_KEY)&&!localStorage.getItem('goshaNote')) note.value=demoV24;
- const oldDemo=$('#demoBtn');
- if(oldDemo){
-   oldDemo.remove();
-   const grid=$('#settingsView .settingsGrid');
-   if(grid){
-     const card=document.createElement('div');card.className='setting';
-     card.innerHTML='<h3>Demo data</h3><p>Load the Pineapple OG + Blue Dream example notebook.</p><button class="btn" id="demoBtnV24">Load demo</button>';
-     grid.appendChild(card);
-     $('#demoBtnV24').onclick=()=>{if(confirm('Replace the current notebook with demo data?')){note.value=demoV24;persist(note);toast('Demo loaded');}};
-   }
- }
- const head=note.closest('.panel')?.querySelector('.panelHead');
- if(head&&!$('#calcBtn')){
-   const calc=document.createElement('button');calc.className='btn primary';calc.id='calcBtn';calc.textContent='Calc';calc.onclick=calculateIntoNotebook;head.appendChild(calc);
- }
- note.placeholder='Example:\nPineapple OG 500/300\n5/60 4.5/50\nSmoked: 12';
- note.dispatchEvent(new Event('input',{bubbles:true}));
-}
+function installUI(){installLaunchPolish();const note=$('#note');if(!note)return;if(!localStorage.getItem(NOTE_KEY)&&!localStorage.getItem('goshaNote'))note.value=demoV24;const oldDemo=$('#demoBtn');if(oldDemo){oldDemo.remove();const grid=$('#settingsView .settingsGrid');if(grid){const card=document.createElement('div');card.className='setting';card.innerHTML='<h3>Demo data</h3><p>Load the Pineapple OG + Blue Dream example notebook.</p><button class="btn" id="demoBtnV24">Load demo</button>';grid.appendChild(card);$('#demoBtnV24').onclick=()=>{if(confirm('Replace the current notebook with demo data?')){note.value=demoV24;persist(note);toast('Demo loaded')}}}}const head=note.closest('.panel')?.querySelector('.panelHead');if(head&&!$('#calcBtn')){const calc=document.createElement('button');calc.className='btn primary';calc.id='calcBtn';calc.textContent='Calc';calc.onclick=calculateIntoNotebook;head.appendChild(calc)}note.placeholder='Example:\nPineapple OG 500/300\n5/60 4.5/50\nSmoked: 12';note.dispatchEvent(new Event('input',{bubbles:true}))}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installUI,{once:true});else installUI();
 })();
