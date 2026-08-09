@@ -6,6 +6,7 @@ const demoV24=`Pineapple OG 383/2030
 3/35 5/60 5/60 5/65 2/30 3/35 2/30 | 2/30 5/65 1/15 2/25 | 5/60 3/40 3/40 1/15 2/30 2/20 2/30
 Smoked: 22
 
+
 Blue Dream 200/1500
 7/70 4/50 2/30 2/25 2/25 | 2/30 5/60 100/720 6/75 2/30 5/60 2/30 2/30 2/30
 Smoked: 10`;
@@ -50,13 +51,25 @@ function calculateIntoNotebook(){
    const cleaned=body.filter(line=>!answerRow(line));
    while(cleaned.length&&cleaned[cleaned.length-1].trim()==='')cleaned.pop();
    const answers=[`Total: €${fmt(earned)}`,`Total sold: ${fmt(sold)}`,`Left: ${fmt(left)}`,smokedLine??`Smoked: ${fmt(smoked)}`];
-   const replacement=[out[block.start],...cleaned,...answers];
+   const gap=b<blocks.length-1?['','']:[];
+   const replacement=[out[block.start],...cleaned,...answers,...gap];
    out.splice(block.start,block.end-block.start,...replacement);
  }
  note.value=out.join('\n');
  persist(note);toast('Calculated');
 }
+function installLaunchPolish(){
+ const style=document.createElement('style');
+ style.id='gosha-v25-polish';
+ style.textContent=`
+   html,body,.app{background:#000!important}
+   .bottomNav{opacity:0;transform:translateY(24px);pointer-events:none;visibility:hidden;transition:opacity .42s ease .12s,transform .55s cubic-bezier(.2,.82,.18,1) .12s,visibility 0s linear .58s}
+   .app.revealed .bottomNav{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .42s ease .16s,transform .55s cubic-bezier(.2,.82,.18,1) .16s,visibility 0s}
+ `;
+ document.head.appendChild(style);
+}
 function installUI(){
+ installLaunchPolish();
  const note=$('#note');if(!note)return;
  if(!localStorage.getItem(NOTE_KEY)&&!localStorage.getItem('goshaNote')) note.value=demoV24;
  const oldDemo=$('#demoBtn');
