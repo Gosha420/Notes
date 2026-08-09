@@ -1,10 +1,10 @@
-const CACHE='gosha-v24-2026-08-09b';
+const CACHE='gosha-v25-2026-08-09';
 const CORE=['./','./index.html','./v24-patch.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable-512.png','./gosha-hero.png'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 async function withPatch(response){
  const text=await response.text();
- const injected=text.includes('v24-patch.js')?text:text.replace('</body>','<script src="./v24-patch.js?v=24b"></script></body>');
+ const injected=text.includes('v24-patch.js')?text:text.replace('</body>','<script src="./v24-patch.js?v=25"></script></body>');
  const headers=new Headers(response.headers);headers.delete('content-length');headers.delete('content-encoding');
  return new Response(injected,{status:response.status,statusText:response.statusText,headers});
 }
