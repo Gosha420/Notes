@@ -1,6 +1,7 @@
 package com.gosha.notes;
 
 import android.annotation.SuppressLint;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebResourceRequest;
@@ -19,10 +20,13 @@ import java.util.concurrent.Executor;
 public class MainActivity extends AppCompatActivity {
     private static final String APP_URL = "https://gosha420.github.io/Notes/";
     private static final String APP_HOST = "gosha420.github.io";
+    private static final String VAULT_PREFS = "gosha_native_vault";
+    private static final String VAULT_PAYLOAD = "notebook_payload";
 
     private WebView webView;
     private BiometricPrompt biometricPrompt;
     private BiometricPrompt.PromptInfo promptInfo;
+    private SharedPreferences vaultPreferences;
     private boolean authRunning = false;
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
@@ -30,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        vaultPreferences = getSharedPreferences(VAULT_PREFS, MODE_PRIVATE);
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF000000);
         setContentView(webView);
@@ -50,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new BiometricBridge(), "AndroidBiometric");
+        webView.addJavascriptInterface(new VaultBridge(), "AndroidVault");
         prepareBiometricPrompt();
         webView.loadUrl(APP_URL);
     }
@@ -106,6 +112,19 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void authenticate() {
             runOnUiThread(MainActivity.this::requestBiometric);
+        }
+    }
+
+    private final class VaultBridge {
+        @JavascriptInterface
+        public void save(String payload) {
+            if (payload == null) return;
+            vaultPreferences.edit().putString(VAULT_PAYLOAD, payload).apply();
+        }
+
+        @JavascriptInterface
+        public String load() {
+            return vaultPreferences.getString(VAULT_PAYLOAD, "");
         }
     }
 
