@@ -55,3 +55,18 @@ function setup(){const grid=document.querySelector('#settingsView .settingsGrid'
 function boot(){if(setup())return;let tries=0;const id=setInterval(()=>{tries++;if(setup()||tries>20)clearInterval(id)},100)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
+
+(()=>{
+'use strict';
+const DEMO_PREFIX='Pineapple OG 383/2030',UNDO_KEY='goshaRecoveryUndo',NOTE_KEY='goshaNoteV21',LEGACY_NOTE_KEY='goshaNote';
+const preferred=['goshaPreDemoBackupV35','goshaPreDemoBackup','goshaRecoveryUndo','goshaNoteV21','goshaNote'];
+function get(k){try{return localStorage.getItem(k)}catch(_){return null}}
+function put(k,v){try{localStorage.setItem(k,v)}catch(_){}}
+function toast(text){const t=document.querySelector('#toast');if(!t)return;t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
+function plausible(v){return typeof v==='string'&&v.trim().length>0}
+function scan(){const out=[];const add=(key,value)=>{if(!plausible(value)||out.some(x=>x.value===value))return;out.push({key,value})};for(const key of preferred)add(key,get(key));try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(/gosha|note|backup|demo|recover/i.test(key))add(key,get(key))}}catch(_){}return out}
+function recover(){const note=document.querySelector('#note');if(!note)return;const current=note.value;const all=scan().filter(x=>x.value!==current);const best=all.find(x=>x.key==='goshaPreDemoBackupV35')||all.find(x=>/backup/i.test(x.key)&&!x.value.startsWith(DEMO_PREFIX))||all.find(x=>!x.value.startsWith(DEMO_PREFIX))||all[0];if(!best){toast('No recoverable local copy found');return}put(UNDO_KEY,current);note.value=best.value;put(NOTE_KEY,best.value);put(LEGACY_NOTE_KEY,best.value);note.dispatchEvent(new Event('input',{bubbles:true}));toast('Recovered data from '+best.key)}
+function installButton(){const head=document.querySelector('#notebookView .panelHead');if(!head)return false;let b=document.querySelector('#goshaRecoverHeader');if(!b){b=document.createElement('button');b.type='button';b.id='goshaRecoverHeader';b.className='btn primary';b.textContent='RECOVER DATA';b.style.cssText='font-weight:800;letter-spacing:.04em;border-color:rgba(134,255,40,.55)!important;box-shadow:0 0 18px rgba(134,255,40,.12)!important';head.appendChild(b)}b.onclick=recover;window.goshaRecoverData=recover;return true}
+function boot(){if(installButton())return;let tries=0;const id=setInterval(()=>{tries++;if(installButton()||tries>30)clearInterval(id)},100)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
