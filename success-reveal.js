@@ -29,44 +29,29 @@ window.goshaBiometricResult=ok=>{
  bio.classList.remove('failread','success');
  bio.classList.add('successReveal');
  try{navigator.vibrate?.([18,48,24,48,42])}catch(_){}
- setTimeout(()=>{
-   document.body.classList.remove('bio-pending','bio-success-reveal');
-   bio.classList.remove('show','successReveal');
- },1320);
- };
- return true;
-}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setTimeout(install,0)},{once:true});else setTimeout(install,0);
+ setTimeout(()=>{document.body.classList.remove('bio-pending','bio-success-reveal');bio.classList.remove('show','successReveal')},1320)
+};
+return true}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});else setTimeout(install,0)
 })();
 
 (()=>{
 'use strict';
-const NOTE_KEY='goshaNoteV21',LEGACY_NOTE_KEY='goshaNote',CURRENT_BACKUP='goshaPreDemoBackup',LEGACY_BACKUPS=['goshaPreDemoBackupV35'],UNDO_KEY='goshaRecoveryUndo';
-const demoPrefix='Pineapple OG 383/2030';
-function toast(text){const t=document.querySelector('#toast');if(!t)return;t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400)}
-function get(key){try{return localStorage.getItem(key)}catch(_){return null}}
-function put(key,value){try{localStorage.setItem(key,value)}catch(_){}}
-function usable(value){return typeof value==='string'&&value.trim().length>0}
-function candidates(){const out=[];for(const key of [...LEGACY_BACKUPS,CURRENT_BACKUP]){const value=get(key);if(usable(value)&&!out.some(x=>x.value===value))out.push({key,value})}return out}
-function saveNotebook(value){const note=document.querySelector('#note');if(!note)return;put(UNDO_KEY,note.value);note.value=value;put(NOTE_KEY,value);put(LEGACY_NOTE_KEY,value);note.dispatchEvent(new Event('input',{bubbles:true}));const status=document.querySelector('#saveStatus');if(status)status.textContent='LOCAL · SAVED'}
-function recoverBest(){const all=candidates();if(!all.length){toast('No old local backup found');return}const current=document.querySelector('#note')?.value||'';const best=all.find(x=>x.key==='goshaPreDemoBackupV35'&&x.value!==current)||all.find(x=>!x.value.startsWith(demoPrefix)&&x.value!==current)||all.find(x=>x.value!==current)||all[0];saveNotebook(best.value);if(get(CURRENT_BACKUP)===null)put(CURRENT_BACKUP,best.value);toast('Old notebook recovered')}
-function importText(value){if(!usable(value)){toast('Backup file is empty');return}saveNotebook(value);toast('Notebook imported')}
-function setup(){const grid=document.querySelector('#settingsView .settingsGrid');if(!grid||document.querySelector('#goshaRecoveryCard'))return false;const card=document.createElement('div');card.className='setting';card.id='goshaRecoveryCard';card.innerHTML='<h3>Recovery</h3><p>Recover older pre-demo data or load a saved notebook file. Your current notebook is kept as an undo copy first.</p><button class="btn" id="goshaRecoverOld" type="button">Recover old notebook</button><button class="btn" id="goshaImportBtn" type="button" style="margin-top:10px">Import notebook file</button><button class="btn" id="goshaUndoRecovery" type="button" style="margin-top:10px">Undo last recovery</button><input id="goshaImportFile" type="file" accept="text/plain,.txt,.json" style="display:none">';grid.appendChild(card);const recover=card.querySelector('#goshaRecoverOld'),input=card.querySelector('#goshaImportFile'),undo=card.querySelector('#goshaUndoRecovery');recover.style.display=candidates().length?'':'none';undo.style.display=get(UNDO_KEY)!==null?'':'none';recover.onclick=()=>{recoverBest();undo.style.display=get(UNDO_KEY)!==null?'':'none'};card.querySelector('#goshaImportBtn').onclick=()=>input.click();input.onchange=()=>{const f=input.files&&input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{importText(String(r.result||''));undo.style.display=get(UNDO_KEY)!==null?'':'none'};r.onerror=()=>toast('Could not read backup file');r.readAsText(f)};undo.onclick=()=>{const old=get(UNDO_KEY);if(old===null)return;const note=document.querySelector('#note');if(!note)return;const now=note.value;note.value=old;put(NOTE_KEY,old);put(LEGACY_NOTE_KEY,old);put(UNDO_KEY,now);note.dispatchEvent(new Event('input',{bubbles:true}));toast('Recovery undone')};return true}
-function boot(){if(setup())return;let tries=0;const id=setInterval(()=>{tries++;if(setup()||tries>20)clearInterval(id)},100)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-})();
-
-(()=>{
-'use strict';
-const DEMO_PREFIX='Pineapple OG 383/2030',UNDO_KEY='goshaRecoveryUndo',NOTE_KEY='goshaNoteV21',LEGACY_NOTE_KEY='goshaNote';
-const preferred=['goshaPreDemoBackupV35','goshaPreDemoBackup','goshaRecoveryUndo','goshaNoteV21','goshaNote'];
-function get(k){try{return localStorage.getItem(k)}catch(_){return null}}
-function put(k,v){try{localStorage.setItem(k,v)}catch(_){}}
-function toast(text){const t=document.querySelector('#toast');if(!t)return;t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
-function plausible(v){return typeof v==='string'&&v.trim().length>0}
-function scan(){const out=[];const add=(key,value)=>{if(!plausible(value)||out.some(x=>x.value===value))return;out.push({key,value})};for(const key of preferred)add(key,get(key));try{for(let i=0;i<localStorage.length;i++){const key=localStorage.key(i)||'';if(/gosha|note|backup|demo|recover/i.test(key))add(key,get(key))}}catch(_){}return out}
-function recover(){const note=document.querySelector('#note');if(!note)return;const current=note.value;const all=scan().filter(x=>x.value!==current);const best=all.find(x=>x.key==='goshaPreDemoBackupV35')||all.find(x=>/backup/i.test(x.key)&&!x.value.startsWith(DEMO_PREFIX))||all.find(x=>!x.value.startsWith(DEMO_PREFIX))||all[0];if(!best){toast('No recoverable local copy found');return}put(UNDO_KEY,current);note.value=best.value;put(NOTE_KEY,best.value);put(LEGACY_NOTE_KEY,best.value);note.dispatchEvent(new Event('input',{bubbles:true}));toast('Recovered data from '+best.key)}
-function installButton(){const head=document.querySelector('#notebookView .panelHead');if(!head)return false;let b=document.querySelector('#goshaRecoverHeader');if(!b){b=document.createElement('button');b.type='button';b.id='goshaRecoverHeader';b.className='btn primary';b.textContent='RECOVER DATA';b.style.cssText='font-weight:800;letter-spacing:.04em;border-color:rgba(134,255,40,.55)!important;box-shadow:0 0 18px rgba(134,255,40,.12)!important';head.appendChild(b)}b.onclick=recover;window.goshaRecoverData=recover;return true}
-function boot(){if(installButton())return;let tries=0;const id=setInterval(()=>{tries++;if(installButton()||tries>30)clearInterval(id)},100)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+const s=document.createElement('style');
+s.id='gosha-deck-style';
+s.textContent=`
+#goshaRecoverHeader{display:none!important}
+.bottomNav.vaultDeck{height:72px!important;display:grid!important;grid-template-columns:minmax(118px,.9fr) repeat(2,minmax(0,1fr))!important;left:10px!important;right:10px!important;bottom:max(9px,env(safe-area-inset-bottom))!important;border:1px solid rgba(108,255,80,.22)!important;border-radius:16px!important;background:linear-gradient(180deg,rgba(3,10,5,.97),rgba(0,2,1,.985))!important;box-shadow:0 -14px 46px rgba(0,0,0,.72),0 0 0 1px rgba(50,255,80,.025) inset,0 0 30px rgba(41,255,88,.055)!important;backdrop-filter:blur(18px)!important;-webkit-backdrop-filter:blur(18px)!important;overflow:hidden!important}
+.bottomNav.vaultDeck:before{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(130,255,105,.7),transparent);opacity:.7;pointer-events:none}
+.bottomNav.vaultDeck:after{content:"SYS // GO$HA";position:absolute;right:10px;top:5px;font:600 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:rgba(128,255,105,.24);pointer-events:none}
+.vaultDeckStatus{position:relative;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:3px;padding:0 13px;border-right:1px solid rgba(110,255,85,.12);font:600 9px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;color:rgba(188,255,175,.55);min-width:0}
+.vaultDeckStatus b{font-size:9px;color:#b8ffac;letter-spacing:.06em;white-space:nowrap}.deckPulse{width:6px;height:6px;border-radius:50%;background:#8cff72;box-shadow:0 0 10px rgba(130,255,105,.9);animation:deckPulse 1.7s ease-in-out infinite}.vaultDeckStatus>span:nth-child(2){position:absolute;left:28px;top:20px}
+@keyframes deckPulse{50%{opacity:.28;box-shadow:0 0 3px rgba(130,255,105,.3)}}
+.bottomNav.vaultDeck .navBtn{height:72px!important;border:0!important;border-right:1px solid rgba(110,255,85,.09)!important;background:linear-gradient(180deg,rgba(255,255,255,.012),transparent)!important;color:rgba(173,194,169,.55)!important;font:600 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace!important;letter-spacing:.12em!important;text-transform:uppercase!important;position:relative!important}
+.bottomNav.vaultDeck .navBtn:last-child{border-right:0!important}.bottomNav.vaultDeck .navBtn.active{color:#dffff8!important;background:radial-gradient(circle at 50% 100%,rgba(91,255,78,.10),transparent 65%)!important;text-shadow:0 0 12px rgba(104,255,91,.28)}
+.bottomNav.vaultDeck .navBtn.active:after{left:22%!important;right:22%!important;height:2px!important;background:#8cff72!important;box-shadow:0 0 12px rgba(110,255,90,.75)!important}
+.vaultSetting{position:relative;overflow:hidden}.vaultSetting:before{content:"DATA REDUNDANCY // ACTIVE";position:absolute;right:12px;top:9px;font:600 7px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.13em;color:rgba(126,255,103,.28)}.vaultMini{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0 13px}.vaultMini span{display:flex;justify-content:space-between;gap:8px;padding:7px 8px;border:1px solid rgba(120,255,95,.1);border-radius:8px;background:#000;font:600 9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:rgba(205,222,200,.48)}.vaultMini b{color:rgba(255,179,80,.72)}.vaultMini b.ok{color:#9cff83;text-shadow:0 0 8px rgba(110,255,90,.25)}
+@media(max-width:440px){.bottomNav.vaultDeck{grid-template-columns:104px repeat(2,minmax(0,1fr))!important}.vaultDeckStatus{padding-left:10px}.vaultDeckStatus b{font-size:8px}.bottomNav.vaultDeck .navBtn{font-size:9px!important;letter-spacing:.08em!important}}
+`;
+document.head.appendChild(s)
 })();
