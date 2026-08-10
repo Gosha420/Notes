@@ -1,0 +1,42 @@
+(()=>{
+'use strict';
+const $=s=>document.querySelector(s);
+const fmt=n=>new Intl.NumberFormat('en-GB',{maximumFractionDigits:2}).format(Math.round((Number(n)+Number.EPSILON)*100)/100);
+const money=n=>'€'+fmt(n);
+function matches(text){return [...text.matchAll(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g)].map(m=>({qty:+m[1],price:+m[2]}))}
+function parseNotebook(text){
+ const lines=String(text||'').split(/\r?\n/),products=[];
+ let current=null;
+ const loose={name:'Unsorted entries',acquired:0,spent:0,sold:0,earned:0,smoked:0,tx:0,days:0,loose:true};
+ for(const line of lines){
+  const trimmed=line.trim();if(!trimmed)continue;
+  if(/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left)\s*:/i.test(trimmed))continue;
+  const header=trimmed.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
+  if(header&&/[A-Za-zÀ-ž]/.test(header[1])){current={name:header[1].trim(),acquired:+header[2],spent:+header[3],sold:0,earned:0,smoked:0,tx:0,days:0};products.push(current);continue}
+  const used=trimmed.match(/^(?:smoked|used)\s*:?\s*(\d+(?:\.\d+)?)/i);
+  if(used){(current||loose).smoked=+used[1];continue}
+  const all=matches(line);if(all.length){const target=current||loose;target.sold+=all.reduce((a,x)=>a+x.qty,0);target.earned+=all.reduce((a,x)=>a+x.price,0);target.tx+=all.length;target.days+=(line.match(/\|/g)||[]).length+(target.days===0?1:0)}
+ }
+ if(loose.tx)products.unshift(loose);
+ for(const p of products){p.left=Math.max(0,p.acquired-p.sold-p.smoked);p.avg=p.sold?p.earned/p.sold:0;p.potential=p.left*p.avg;p.profit=p.earned-p.spent}
+ return products;
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function installStyles(){if($('#gosha-dashboard-style'))return;const s=document.createElement('style');s.id='gosha-dashboard-style';s.textContent=`
+#goshaDashboard{position:relative;margin-top:14px;border:1px solid rgba(134,255,40,.18);border-radius:23px;overflow:hidden;background:linear-gradient(180deg,rgba(5,10,5,.97),rgba(0,0,0,.995));box-shadow:inset 0 1px 0 rgba(220,255,210,.025),0 20px 55px rgba(0,0,0,.34)}
+#goshaDashboard:before{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(134,255,40,.012) 6px 7px),linear-gradient(90deg,rgba(134,255,40,.025),transparent 18%,transparent 82%,rgba(134,255,40,.018));opacity:.6}
+#goshaDashboard:after{content:"";position:absolute;left:-35%;top:0;width:28%;height:1px;background:linear-gradient(90deg,transparent,#a9ff75,transparent);box-shadow:0 0 14px rgba(134,255,40,.45);animation:dashSweep 5.6s linear infinite;pointer-events:none}@keyframes dashSweep{to{left:110%}}
+.dashHead{position:relative;z-index:1;display:flex;align-items:center;gap:10px;padding:15px 17px;border-bottom:1px solid rgba(134,255,40,.11);font:700 11px/1.1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.16em;color:rgba(210,235,205,.68)}
+.dashHead .liveDot{width:7px;height:7px;border-radius:50%;background:#86ff28;box-shadow:0 0 12px rgba(134,255,40,.8);animation:dashPulse 1.8s ease-in-out infinite}.dashHead .dashTitle{margin-right:auto}.dashHead .tx{color:rgba(134,255,40,.75);letter-spacing:.1em}@keyframes dashPulse{50%{opacity:.35;box-shadow:0 0 4px rgba(134,255,40,.25)}}
+.dashStats{position:relative;z-index:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:rgba(134,255,40,.09);border-bottom:1px solid rgba(134,255,40,.09)}
+.dashStat{min-width:0;background:rgba(0,0,0,.96);padding:16px 15px 14px}.dashStat small{display:block;margin-bottom:8px;font:650 9px/1.15 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.15em;color:rgba(140,163,137,.62);white-space:nowrap}.dashStat strong{display:block;overflow:hidden;text-overflow:ellipsis;font:650 19px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:#e9f3e6;text-shadow:0 0 16px rgba(134,255,40,.06)}.dashStat.primary strong{color:#cfffbd}.dashStat.profit strong{color:#e7ffe0}
+.dashProducts{position:relative;z-index:1;padding:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.dashProduct,.dashEmpty{border:1px solid rgba(134,255,40,.105);border-radius:15px;background:linear-gradient(180deg,rgba(134,255,40,.018),rgba(255,255,255,.006));padding:14px}.dashProductHead{display:flex;align-items:center;gap:8px;margin-bottom:12px}.dashProductHead b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:700 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.04em;color:#dce9d8}.dashBadge{margin-left:auto;white-space:nowrap;border:1px solid rgba(134,255,40,.16);border-radius:999px;padding:4px 7px;font:650 8px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:rgba(166,255,145,.66);background:rgba(134,255,40,.025)}.dashRow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding:5px 0;color:#7d8b79;font:500 11px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace}.dashRow strong{font-size:12px;color:#d8e4d4}.dashMeter{height:3px;margin-top:10px;border-radius:99px;background:rgba(134,255,40,.07);overflow:hidden}.dashMeter i{display:block;height:100%;background:linear-gradient(90deg,rgba(134,255,40,.3),#86ff28);box-shadow:0 0 8px rgba(134,255,40,.35)}.dashEmpty{grid-column:1/-1;color:#697466;font:500 11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.06em}
+@media(max-width:620px){.dashStats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashProducts{grid-template-columns:1fr}.dashStat strong{font-size:17px}}
+@media(prefers-reduced-motion:reduce){#goshaDashboard:after,.dashHead .liveDot{animation:none}}
+`;document.head.appendChild(s)}
+function install(){const view=$('#notebookView');if(!view)return false;installStyles();if($('#goshaDashboard'))return true;const dash=document.createElement('section');dash.id='goshaDashboard';dash.setAttribute('aria-label','Notebook command dashboard');dash.innerHTML='<div class="dashHead"><span class="liveDot"></span><span class="dashTitle">COMMAND // LIVE LEDGER</span><span class="tx" id="dashTx">0 TX</span></div><div class="dashStats"><div class="dashStat primary"><small>TOTAL EARNED</small><strong id="dashEarned">€0</strong></div><div class="dashStat"><small>TOTAL SOLD</small><strong id="dashSold">0</strong></div><div class="dashStat profit"><small>PROFIT</small><strong id="dashProfit">€0</strong></div><div class="dashStat"><small>REMAINING</small><strong id="dashLeft">0</strong></div><div class="dashStat"><small>STOCK COST</small><strong id="dashCost">€0</strong></div><div class="dashStat"><small>LEFT TO EARN</small><strong id="dashPotential">€0</strong></div></div><div class="dashProducts" id="dashProducts"></div>';
+ view.appendChild(dash);return true}
+function render(){const note=$('#note'),out=$('#dashProducts');if(!note||!out)return;const products=parseNotebook(note.value),sum=k=>products.reduce((a,p)=>a+(p[k]||0),0);const earned=sum('earned'),sold=sum('sold'),cost=sum('spent'),profit=earned-cost,left=sum('left'),potential=sum('potential'),tx=sum('tx');$('#dashEarned').textContent=money(earned);$('#dashSold').textContent=fmt(sold);$('#dashProfit').textContent=money(profit);$('#dashLeft').textContent=fmt(left);$('#dashCost').textContent=money(cost);$('#dashPotential').textContent=money(potential);$('#dashTx').textContent=tx+' TX';out.innerHTML=products.length?products.map(p=>{const used=p.acquired?Math.min(100,(p.sold+p.smoked)/p.acquired*100):100;return `<article class="dashProduct"><div class="dashProductHead"><b>${esc(p.name)}</b><span class="dashBadge">${p.tx} TX</span></div><div class="dashRow"><span>EARNED</span><strong>${money(p.earned)}</strong></div><div class="dashRow"><span>SOLD</span><strong>${fmt(p.sold)}</strong></div>${p.loose?'':`<div class="dashRow"><span>REMAINING</span><strong>${fmt(p.left)}</strong></div><div class="dashRow"><span>PROFIT</span><strong>${money(p.profit)}</strong></div><div class="dashMeter" aria-hidden="true"><i style="width:${used}%"></i></div>`}</article>`}).join(''):'<div class="dashEmpty">NO LEDGER SIGNAL // Add product headings and transactions to populate telemetry.</div>'}
+function boot(){let tries=0;const go=()=>{const note=$('#note');if(!note||!install()){if(tries++<40)setTimeout(go,100);return}note.addEventListener('input',render,{passive:true});note.addEventListener('change',render);render()};go()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
