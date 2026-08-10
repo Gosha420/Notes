@@ -1,7 +1,7 @@
 const CACHE_PREFIX='gosha-notes-';
-const CACHE=CACHE_PREFIX+'v52';
+const CACHE=CACHE_PREFIX+'v53';
 const SHELL='./index.html';
-const CORE=[SHELL,'./app.js?v=52','./success-reveal.js?v=52','./vault.js?v=52','./dashboard.js?v=52','./manifest.webmanifest'];
+const CORE=[SHELL,'./app.js?v=53','./success-reveal.js?v=53','./vault.js?v=53','./dashboard.js?v=53','./manifest.webmanifest'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',event=>{event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith(CACHE_PREFIX)&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 self.addEventListener('fetch',event=>{const request=event.request;if(request.method!=='GET')return;const url=new URL(request.url);if(url.origin!==self.location.origin||url.pathname.endsWith('/sw.js')||url.pathname.endsWith('/__gosha_notebook_backup__'))return;if(request.mode==='navigate'){event.respondWith((async()=>{const cache=await caches.open(CACHE);try{const response=await fetch(request,{cache:'no-store'});if(response.ok)event.waitUntil(cache.put(SHELL,response.clone()));return response}catch(_){const cached=await cache.match(SHELL);if(cached)return cached;return new Response('<!doctype html><meta name="theme-color" content="#000"><meta name="viewport" content="width=device-width,initial-scale=1"><body style="margin:0;background:#000">',{headers:{'content-type':'text/html;charset=utf-8'}})}})());return}event.respondWith((async()=>{const cache=await caches.open(CACHE);const cached=await cache.match(request);if(cached)return cached;try{const response=await fetch(request,{cache:'no-store'});if(response.ok)event.waitUntil(cache.put(request,response.clone()));return response}catch(_){return new Response('',{status:504})}})())});
