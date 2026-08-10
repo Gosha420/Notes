@@ -66,8 +66,6 @@
 
   document.getElementById('exportBtn').addEventListener('click',async()=>{try{await navigator.clipboard.writeText(note.value);const t=document.getElementById('toast');t.textContent='Notebook copied';t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1000)}catch(_){}});
 
-  setTimeout(()=>document.getElementById('app')?.classList.add('revealed'),2400);
-
   if('serviceWorker' in navigator){
     window.addEventListener('load',async()=>{
       try{
