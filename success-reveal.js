@@ -38,3 +38,20 @@ window.goshaBiometricResult=ok=>{
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>{setTimeout(install,0)},{once:true});else setTimeout(install,0);
 })();
+
+(()=>{
+'use strict';
+const NOTE_KEY='goshaNoteV21',LEGACY_NOTE_KEY='goshaNote',CURRENT_BACKUP='goshaPreDemoBackup',LEGACY_BACKUPS=['goshaPreDemoBackupV35'],UNDO_KEY='goshaRecoveryUndo';
+const demoPrefix='Pineapple OG 383/2030';
+function toast(text){const t=document.querySelector('#toast');if(!t)return;t.textContent=text;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1400)}
+function get(key){try{return localStorage.getItem(key)}catch(_){return null}}
+function put(key,value){try{localStorage.setItem(key,value)}catch(_){}}
+function usable(value){return typeof value==='string'&&value.trim().length>0}
+function candidates(){const out=[];for(const key of [...LEGACY_BACKUPS,CURRENT_BACKUP]){const value=get(key);if(usable(value)&&!out.some(x=>x.value===value))out.push({key,value})}return out}
+function saveNotebook(value){const note=document.querySelector('#note');if(!note)return;put(UNDO_KEY,note.value);note.value=value;put(NOTE_KEY,value);put(LEGACY_NOTE_KEY,value);note.dispatchEvent(new Event('input',{bubbles:true}));const status=document.querySelector('#saveStatus');if(status)status.textContent='LOCAL · SAVED'}
+function recoverBest(){const all=candidates();if(!all.length){toast('No old local backup found');return}const current=document.querySelector('#note')?.value||'';const best=all.find(x=>x.key==='goshaPreDemoBackupV35'&&x.value!==current)||all.find(x=>!x.value.startsWith(demoPrefix)&&x.value!==current)||all.find(x=>x.value!==current)||all[0];saveNotebook(best.value);if(get(CURRENT_BACKUP)===null)put(CURRENT_BACKUP,best.value);toast('Old notebook recovered')}
+function importText(value){if(!usable(value)){toast('Backup file is empty');return}saveNotebook(value);toast('Notebook imported')}
+function setup(){const grid=document.querySelector('#settingsView .settingsGrid');if(!grid||document.querySelector('#goshaRecoveryCard'))return false;const card=document.createElement('div');card.className='setting';card.id='goshaRecoveryCard';card.innerHTML='<h3>Recovery</h3><p>Recover older pre-demo data or load a saved notebook file. Your current notebook is kept as an undo copy first.</p><button class="btn" id="goshaRecoverOld" type="button">Recover old notebook</button><button class="btn" id="goshaImportBtn" type="button" style="margin-top:10px">Import notebook file</button><button class="btn" id="goshaUndoRecovery" type="button" style="margin-top:10px">Undo last recovery</button><input id="goshaImportFile" type="file" accept="text/plain,.txt,.json" style="display:none">';grid.appendChild(card);const recover=card.querySelector('#goshaRecoverOld'),input=card.querySelector('#goshaImportFile'),undo=card.querySelector('#goshaUndoRecovery');recover.style.display=candidates().length?'':'none';undo.style.display=get(UNDO_KEY)!==null?'':'none';recover.onclick=()=>{recoverBest();undo.style.display=get(UNDO_KEY)!==null?'':'none'};card.querySelector('#goshaImportBtn').onclick=()=>input.click();input.onchange=()=>{const f=input.files&&input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{importText(String(r.result||''));undo.style.display=get(UNDO_KEY)!==null?'':'none'};r.onerror=()=>toast('Could not read backup file');r.readAsText(f)};undo.onclick=()=>{const old=get(UNDO_KEY);if(old===null)return;const note=document.querySelector('#note');if(!note)return;const now=note.value;note.value=old;put(NOTE_KEY,old);put(LEGACY_NOTE_KEY,old);put(UNDO_KEY,now);note.dispatchEvent(new Event('input',{bubbles:true}));toast('Recovery undone')};return true}
+function boot(){if(setup())return;let tries=0;const id=setInterval(()=>{tries++;if(setup()||tries>20)clearInterval(id)},100)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+})();
