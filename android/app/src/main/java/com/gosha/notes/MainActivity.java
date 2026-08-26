@@ -22,6 +22,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String APP_HOST = "gosha420.github.io";
     private static final String VAULT_PREFS = "gosha_native_vault";
     private static final String VAULT_PAYLOAD = "notebook_payload";
+    private static final String ARCHIVE_PAYLOAD = "batch_archive_payload";
 
     private WebView webView;
     private BiometricPrompt biometricPrompt;
@@ -33,19 +34,16 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         vaultPreferences = getSharedPreferences(VAULT_PREFS, MODE_PRIVATE);
         webView = new WebView(this);
         webView.setBackgroundColor(0xFF000000);
         setContentView(webView);
-
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(false);
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
-
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -53,7 +51,6 @@ public class MainActivity extends AppCompatActivity {
                 return host == null || !APP_HOST.equalsIgnoreCase(host);
             }
         });
-
         webView.addJavascriptInterface(new BiometricBridge(), "AndroidBiometric");
         webView.addJavascriptInterface(new VaultBridge(), "AndroidVault");
         prepareBiometricPrompt();
@@ -70,21 +67,18 @@ public class MainActivity extends AppCompatActivity {
                         authRunning = false;
                         webView.evaluateJavascript("window.goshaBiometricResult && window.goshaBiometricResult(true)", null);
                     }
-
                     @Override
                     public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                         super.onAuthenticationError(errorCode, errString);
                         authRunning = false;
                         webView.evaluateJavascript("window.goshaBiometricResult && window.goshaBiometricResult(false)", null);
                     }
-
                     @Override
                     public void onAuthenticationFailed() {
                         super.onAuthenticationFailed();
                         webView.evaluateJavascript("window.goshaBiometricAttemptFailed && window.goshaBiometricAttemptFailed()", null);
                     }
                 });
-
         promptInfo = new BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Unlock GO$HA")
                 .setSubtitle("Verify with your fingerprint or enrolled strong biometric")
@@ -96,36 +90,34 @@ public class MainActivity extends AppCompatActivity {
 
     private void requestBiometric() {
         if (authRunning) return;
-
         BiometricManager manager = BiometricManager.from(this);
         int status = manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG);
         if (status != BiometricManager.BIOMETRIC_SUCCESS) {
             webView.evaluateJavascript("window.goshaBiometricUnavailable && window.goshaBiometricUnavailable(" + status + ")", null);
             return;
         }
-
         authRunning = true;
         biometricPrompt.authenticate(promptInfo);
     }
 
     private final class BiometricBridge {
         @JavascriptInterface
-        public void authenticate() {
-            runOnUiThread(MainActivity.this::requestBiometric);
-        }
+        public void authenticate() { runOnUiThread(MainActivity.this::requestBiometric); }
     }
 
     private final class VaultBridge {
         @JavascriptInterface
         public void save(String payload) {
-            if (payload == null) return;
-            vaultPreferences.edit().putString(VAULT_PAYLOAD, payload).apply();
+            if (payload != null) vaultPreferences.edit().putString(VAULT_PAYLOAD, payload).apply();
         }
-
         @JavascriptInterface
-        public String load() {
-            return vaultPreferences.getString(VAULT_PAYLOAD, "");
+        public String load() { return vaultPreferences.getString(VAULT_PAYLOAD, ""); }
+        @JavascriptInterface
+        public void saveArchive(String payload) {
+            if (payload != null) vaultPreferences.edit().putString(ARCHIVE_PAYLOAD, payload).apply();
         }
+        @JavascriptInterface
+        public String loadArchive() { return vaultPreferences.getString(ARCHIVE_PAYLOAD, ""); }
     }
 
     @Override
