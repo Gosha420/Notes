@@ -7,6 +7,7 @@ on:
       - 'android/**'
       - '.github/workflows/android-apk.yml'
 
+# Keep native vault/archive bridge changes covered by a fresh APK build.
 jobs:
   build:
     runs-on: ubuntu-latest
