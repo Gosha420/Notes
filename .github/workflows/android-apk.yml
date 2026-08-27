@@ -70,8 +70,8 @@ jobs:
           test -x "$APKSIGNER"
           "$APKSIGNER" verify --verbose --print-certs "$APK"
           KEY_FP="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}' | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          APK_FP="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:lower:]' '[:upper:]')"
-          test -n "$KEY_FP" && test "$KEY_FP" = "$APK_FP"
+          APK_FP="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/certificate SHA-256 digest:/{print $NF; exit}' | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          test -n "$KEY_FP" && test -n "$APK_FP" && test "$KEY_FP" = "$APK_FP"
           echo "Verified APK signer SHA-256: $APK_FP"
 
       - name: Upload APK artifact
