@@ -7,7 +7,10 @@ on:
       - 'android/**'
       - '.github/workflows/android-apk.yml'
 
-# Keep native vault/archive bridge changes covered by a fresh APK build.
+permissions:
+  contents: write
+
+# Keep native vault/archive/updater changes covered by a fresh APK build.
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,13 +29,32 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      # From this updater build onward, keep one debug signing identity so
+      # Android can install subsequent APKs over the installed app.
+      - name: Restore stable debug signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: gosha-notes-debug-signing-v1
+
       - name: Build debug APK
         working-directory: android
         run: gradle :app:assembleDebug --stacktrace
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: GO$HA-biometric-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+      - name: Publish latest reinstall APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk gosha-notes.apk
+          gh release delete android-latest --cleanup-tag -y || true
+          gh release create android-latest gosha-notes.apk \
+            --target "$GITHUB_SHA" \
+            --title "GO$HA Android latest" \
+            --notes "Latest GO$HA Android APK. The in-app Settings updater points to this release."
