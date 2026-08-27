@@ -29,13 +29,34 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      # From this updater build onward, keep one debug signing identity so
-      # Android can install subsequent APKs over the installed app.
       - name: Restore stable debug signing key
+        id: signing-key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
-          key: gosha-notes-debug-signing-v1
+          key: gosha-notes-debug-signing-v2
+
+      # Bootstrap the persistent signer exactly once. The follow-up workflow
+      # locks this cache so a missing key fails instead of silently rotating it.
+      - name: Bootstrap signing key on first run
+        if: steps.signing-key.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$HOME/.android"
+          keytool -genkeypair -v \
+            -keystore "$HOME/.android/debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=GO$HA Android,O=GO$HA,C=LT"
+          test -s "$HOME/.android/debug.keystore"
+
+      - name: Verify signing key
+        run: |
+          test -s "$HOME/.android/debug.keystore"
+          keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E 'SHA256:|Valid from:'
 
       - name: Build debug APK
         working-directory: android
