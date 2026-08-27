@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -187,6 +188,14 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript("window.goshaUpdateState && window.goshaUpdateState('" + safeState + "','" + safeMessage + "')", null);
     }
 
+    private PackageInfo packageInfo() {
+        try {
+            return getPackageManager().getPackageInfo(getPackageName(), 0);
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
     private final class BiometricBridge {
         @JavascriptInterface
         public void authenticate() { runOnUiThread(MainActivity.this::requestBiometric); }
@@ -209,10 +218,17 @@ public class MainActivity extends AppCompatActivity {
 
     private final class UpdateBridge {
         @JavascriptInterface
-        public int getVersionCode() { return BuildConfig.VERSION_CODE; }
+        @SuppressWarnings("deprecation")
+        public int getVersionCode() {
+            PackageInfo info = packageInfo();
+            return info == null ? 0 : info.versionCode;
+        }
 
         @JavascriptInterface
-        public String getVersionName() { return BuildConfig.VERSION_NAME; }
+        public String getVersionName() {
+            PackageInfo info = packageInfo();
+            return info == null || info.versionName == null ? "" : info.versionName;
+        }
 
         @JavascriptInterface
         public boolean canInstallUpdates() {
