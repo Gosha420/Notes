@@ -29,38 +29,50 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      # Never silently rotate the signing identity. If this cache disappears,
+      # stop the build and require an explicit signing-key recovery decision.
       - name: Restore stable debug signing key
-        id: signing-key
         uses: actions/cache@v4
         with:
           path: ~/.android/debug.keystore
           key: gosha-notes-debug-signing-v2
-
-      # Bootstrap the persistent signer exactly once. The follow-up workflow
-      # locks this cache so a missing key fails instead of silently rotating it.
-      - name: Bootstrap signing key on first run
-        if: steps.signing-key.outputs.cache-hit != 'true'
-        run: |
-          mkdir -p "$HOME/.android"
-          keytool -genkeypair -v \
-            -keystore "$HOME/.android/debug.keystore" \
-            -storepass android \
-            -alias androiddebugkey \
-            -keypass android \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000 \
-            -dname "CN=GO$HA Android,O=GO$HA,C=LT"
-          test -s "$HOME/.android/debug.keystore"
+          fail-on-cache-miss: true
 
       - name: Verify signing key
         run: |
           test -s "$HOME/.android/debug.keystore"
           keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | grep -E 'SHA256:|Valid from:'
 
+      - name: Verify native update version metadata
+        run: |
+          python3 - <<'PY'
+          import json, re, pathlib, sys
+          gradle = pathlib.Path('android/app/build.gradle').read_text()
+          manifest = json.loads(pathlib.Path('app-update.json').read_text())
+          m = re.search(r'\bversionCode\s+(\d+)', gradle)
+          if not m:
+              sys.exit('Could not read Android versionCode')
+          code = int(m.group(1))
+          required = int(manifest.get('requiredNativeVersion', -1))
+          if code != required:
+              sys.exit(f'Native version mismatch: build.gradle={code}, app-update.json={required}')
+          print(f'Native version metadata aligned at v{code}')
+          PY
+
       - name: Build debug APK
         working-directory: android
         run: gradle :app:assembleDebug --stacktrace
+
+      - name: Verify APK uses stable signer
+        run: |
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          test -x "$APKSIGNER"
+          "$APKSIGNER" verify --verbose --print-certs "$APK"
+          KEY_FP="$(keytool -list -v -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey | awk '/SHA256:/{print $2; exit}' | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          APK_FP="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest:/{print $2; exit}' | tr -d ':' | tr '[:lower:]' '[:upper:]')"
+          test -n "$KEY_FP" && test "$KEY_FP" = "$APK_FP"
+          echo "Verified APK signer SHA-256: $APK_FP"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
