@@ -1,0 +1,7 @@
+{
+  "requiredNativeVersion": 2,
+  "versionName": "1.1",
+  "reinstallRequired": true,
+  "message": "A native Android update is available. Install it to enable the in-app updater and future native-only changes such as launcher icon updates.",
+  "apkUrl": "https://github.com/Gosha420/Notes/releases/download/android-latest/gosha-notes.apk"
+}
