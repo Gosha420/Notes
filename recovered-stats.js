@@ -3,15 +3,14 @@
 const $=s=>document.querySelector(s);
 const fmt=n=>new Intl.NumberFormat('en-GB',{maximumFractionDigits:2}).format(Math.round((Number(n)+Number.EPSILON)*100)/100);
 const money=n=>'€'+fmt(n);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 
-// Verified remembered checkpoint at the END of Day 6. Day 7 is always read live
-// from the notebook; missing historical transaction lines are never fabricated.
 const BASE={
  completedDays:6,currentDay:7,
  earned:2930,net:1000.2,leftToEarn:3500,sold:330,left:343,smoked:27,day6Net:168,
  products:{
-  'LEMON OG':{acquired:500,spent:3100,sold:235,left:250,smoked:15,total:2086.52},
-  'BLUE DREAM':{acquired:200,spent:1400,sold:95,left:93,smoked:12,total:843.48}
+  'LEMON OG':{name:'LEMON OG',acquired:500,spent:3100,sold:235,left:250,smoked:15,total:2086.52},
+  'BLUE DREAM':{name:'BLUE DREAM',acquired:200,spent:1400,sold:95,left:93,smoked:12,total:843.48}
  }
 };
 const TARGET_PER_LEFT=BASE.left?BASE.leftToEarn/BASE.left:0;
@@ -41,10 +40,11 @@ function live(){
   if(/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left)\s*:/i.test(t))continue;
   for(const x of pairs(line)){cur.sold+=x.qty;cur.earned+=x.price;cur.tx++}
  }
- for(const [name,p] of Object.entries(out.products)){
-  const b=BASE.products[name],cost=b.spent/b.acquired,sd=Math.max(0,p.smoked-b.smoked);
+ for(const name of Object.keys(BASE.products)){
+  const b=BASE.products[name],p=out.products[name]||{name,smoked:b.smoked,sold:0,earned:0,tx:0};out.products[name]=p;
+  const cost=b.spent/b.acquired,sd=Math.max(0,p.smoked-b.smoked);
   out.sold+=p.sold;out.earned+=p.earned;out.net+=p.earned-p.sold*cost;out.tx+=p.tx;out.smokedDelta+=sd;
-  p.smokedDelta=sd;p.total=b.total+p.earned;p.totalSold=b.sold+p.sold;p.left=Math.max(0,b.left-p.sold-sd);
+  p.smokedDelta=sd;p.liveNet=p.earned-p.sold*cost;p.total=b.total+p.earned;p.totalSold=b.sold+p.sold;p.left=Math.max(0,b.left-p.sold-sd);p.totalSmoked=b.smoked+sd;
  }
  out.totalEarned=BASE.earned+out.earned;
  out.totalSold=BASE.sold+out.sold;
@@ -56,10 +56,7 @@ function live(){
 
 function set(sel,val){const e=$(sel);if(e&&e.textContent!==String(val))e.textContent=String(val)}
 function setUnknown(sel){set(sel,'—')}
-function mode(){
- if($('#dashDaySelect')?.classList.contains('active'))return 'day';
- return $('#goshaDashboard .dashScope.active')?.dataset.mode||'batch';
-}
+function mode(){if($('#dashDaySelect')?.classList.contains('active'))return 'day';return $('#goshaDashboard .dashScope.active')?.dataset.mode||'batch'}
 function setTop({earned,sold,net,tx,avg,left,leftToEarn,label,delta,headerTx}){
  if(earned===null)setUnknown('#dashEarned');else set('#dashEarned',money(earned));
  if(sold===null)setUnknown('#dashSold');else set('#dashSold',fmt(sold));
@@ -74,49 +71,53 @@ function setCombined(d){
  set('#allEarned',money(d.totalEarned));set('#allSold',fmt(d.totalSold));set('#allNet',money(d.totalNet));
  set('#allAvg',money(d.totalSold?d.totalEarned/d.totalSold:0));set('#allRemaining',fmt(d.totalLeft));set('#allLeftToEarn',money(d.leftToEarn));set('#allStrainCount','2 STRAINS');
 }
+function card(name,earned,sold,net,tx,left,leftToEarn,share){
+ const netText=net===null?'—':money(net),txText=tx===null?'— TX':fmt(tx)+' TX',avg=sold?money(earned/sold):'€0';
+ return `<article class="dashProduct"><div class="dashProductHead"><b>${esc(name)}</b><span class="dashBadge">${txText}</span></div><div class="dashRow"><span>EARNED</span><strong>${money(earned)}</strong></div><div class="dashRow"><span>SOLD</span><strong>${fmt(sold)}</strong></div><div class="dashRow"><span>NET</span><strong>${netText}</strong></div><div class="dashRow"><span>AVG / UNIT</span><strong>${avg}</strong></div><div class="dashRow leftEarnRow"><span>LEFT TO EARN</span><strong>${money(leftToEarn)}</strong></div><div class="dashRow"><span>REMAINING</span><strong>${fmt(left)}</strong></div><div class="dashMeter"><i style="width:${Math.max(0,Math.min(100,share))}%"></i></div></article>`;
+}
+function renderCards(d,m){
+ const out=$('#dashProducts');if(!out)return;
+ let html='';
+ if(m==='day'&&selectedDay<7){
+  html='<div class="dashEmpty">HISTORICAL PER-STRAIN DETAIL NOT RECOVERED</div>';
+ }else if(m==='day'){
+  const total=d.earned;
+  html=Object.values(d.products).map(p=>card(p.name,p.earned,p.sold,p.liveNet,p.tx,p.left,p.left*TARGET_PER_LEFT,total?p.earned/total*100:0)).join('');
+ }else{
+  const total=d.totalEarned;
+  html=Object.values(d.products).map(p=>card(p.name,p.total,p.totalSold,null,null,p.left,p.left*TARGET_PER_LEFT,total?p.total/total*100:0)).join('');
+ }
+ if(out.innerHTML!==html)out.innerHTML=html;
+}
 
 function render(){
  if(!isCurrentNote()||hasOtherBatches())return;
  const d=live();if(!d)return;
- const m=mode(),day=$('#dashDaySelect');
- if(day)day.textContent='DAY '+selectedDay+' / 50';
- const prev=$('#dashPrevDay'),next=$('#dashNextDay');
- if(m==='day'){if(prev)prev.disabled=selectedDay<=1;if(next)next.disabled=selectedDay>=7}
+ const m=mode(),day=$('#dashDaySelect');if(day)day.textContent='DAY '+selectedDay+' / 50';
+ const prev=$('#dashPrevDay'),next=$('#dashNextDay');if(m==='day'){if(prev)prev.disabled=selectedDay<=1;if(next)next.disabled=selectedDay>=7}
 
  if(m==='day'){
-  if(selectedDay===7){
-   setTop({earned:d.earned,sold:d.sold,net:d.net,tx:d.tx,avg:d.sold?d.earned/d.sold:0,left:d.totalLeft,leftToEarn:d.leftToEarn,label:'DAY 7 SIGNAL',delta:'TODAY',headerTx:d.tx+' TX'});
-  }else if(selectedDay===6){
-   setTop({earned:null,sold:null,net:BASE.day6Net,tx:null,avg:null,left:BASE.left,leftToEarn:BASE.leftToEarn,label:'DAY 6 SIGNAL',delta:'RECOVERED NET',headerTx:'— TX'});
-  }else{
-   setTop({earned:null,sold:null,net:null,tx:null,avg:null,left:null,leftToEarn:null,label:'DAY '+selectedDay+' SIGNAL',delta:'HISTORICAL DETAIL LOST',headerTx:'— TX'});
-  }
+  if(selectedDay===7){setTop({earned:d.earned,sold:d.sold,net:d.net,tx:d.tx,avg:d.sold?d.earned/d.sold:0,left:d.totalLeft,leftToEarn:d.leftToEarn,label:'DAY 7 SIGNAL',delta:'TODAY',headerTx:d.tx+' TX'})}
+  else if(selectedDay===6){setTop({earned:null,sold:null,net:BASE.day6Net,tx:null,avg:null,left:BASE.left,leftToEarn:BASE.leftToEarn,label:'DAY 6 SIGNAL',delta:'RECOVERED NET',headerTx:'— TX'})}
+  else{setTop({earned:null,sold:null,net:null,tx:null,avg:null,left:null,leftToEarn:null,label:'DAY '+selectedDay+' SIGNAL',delta:'HISTORICAL DETAIL LOST',headerTx:'— TX'})}
  }else{
-  // Through Day 7, every supported longer window contains the entire current batch.
-  // Historical transaction count is unknown, so do not mislabel today's count as batch TX.
   const labels={week1:'FIRST 7 DAYS',week2:'FIRST 2 WEEKS',week3:'FIRST 3 WEEKS',month:'FIRST 30 DAYS',batch:'WHOLE BATCH'};
   setTop({earned:d.totalEarned,sold:d.totalSold,net:d.totalNet,tx:null,avg:d.totalSold?d.totalEarned/d.totalSold:0,left:d.totalLeft,leftToEarn:d.leftToEarn,label:labels[m]||'WHOLE BATCH',delta:'DAY 6 BASE + DAY 7 LIVE',headerTx:'DAY 7: '+d.tx+' TX'});
  }
- setCombined(d);
+ renderCards(d,m);setCombined(d);
 }
 
-// Calc must preserve the recovered Day-6 checkpoint and only add live Day-7 entries.
 function cleanAndSyncNotebook(){
  if(syncing||!isCurrentNote())return;const n=$('#note'),d=live();if(!n||!d)return;
  const lines=n.value.split(/\r?\n/),heads=[];
- for(let i=0;i<lines.length;i++){
-  const h=lines[i].trim().match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
-  if(h&&BASE.products[h[1].trim().toUpperCase()])heads.push({i,name:h[1].trim().toUpperCase()});
- }
+ for(let i=0;i<lines.length;i++){const h=lines[i].trim().match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);if(h&&BASE.products[h[1].trim().toUpperCase()])heads.push({i,name:h[1].trim().toUpperCase()})}
  if(!heads.length)return;const out=[...lines];
  for(let z=heads.length-1;z>=0;z--){
   const h=heads[z],end=z+1<heads.length?heads[z+1].i:out.length,p=d.products[h.name];if(!p)continue;
-  const body=out.slice(h.i+1,end).filter(l=>!/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left|Smoked|Used)\s*:/i.test(l));
-  while(body.length&&body[body.length-1].trim()==='')body.pop();
+  const body=out.slice(h.i+1,end).filter(l=>!/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left|Smoked|Used)\s*:/i.test(l));while(body.length&&body[body.length-1].trim()==='')body.pop();
   out.splice(h.i,end-h.i,out[h.i],...body,'',`Total: €${fmt(p.total)}`,`Total sold: ${fmt(p.totalSold)}`,`Left: ${fmt(p.left)}`,`Smoked: ${fmt(p.smoked)}`,...(z<heads.length-1?['','']:[]));
  }
- const nextText=out.join('\n');if(nextText===n.value)return;
- syncing=true;n.value=nextText;
+ const nextText=out.join('\n');if(nextText===n.value)return;syncing=true;n.value=nextText;
  try{localStorage.setItem('goshaNoteV21',nextText);localStorage.setItem('goshaNote',nextText)}catch(_){}
  n.dispatchEvent(new Event('input',{bubbles:true}));n.dispatchEvent(new Event('change',{bubbles:true}));syncing=false;
 }
@@ -132,12 +133,10 @@ function ownDayControls(){
 function boot(){
  let tries=0;const go=()=>{
   if(!$('#goshaDashboard')||!$('#note')){if(tries++<60)setTimeout(go,100);return}
-  ownDayControls();render();
-  observer=new MutationObserver(schedule);observer.observe($('#goshaDashboard'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
+  ownDayControls();render();observer=new MutationObserver(schedule);observer.observe($('#goshaDashboard'),{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['class']});
   $('#note').addEventListener('input',schedule,{passive:true});$('#note').addEventListener('change',schedule);
   document.addEventListener('click',e=>{if(e.target?.id==='calcBtn'&&isCurrentNote()){e.preventDefault();e.stopImmediatePropagation();cleanAndSyncNotebook();render()}},true);
- };
- go();
+ };go();
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
