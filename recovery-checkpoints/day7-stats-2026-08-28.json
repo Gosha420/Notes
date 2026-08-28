@@ -1,0 +1,30 @@
+{
+  "checkpoint": "end/current Day 7",
+  "day": 7,
+  "day7ProfitApprox": 168,
+  "endOfDay6Baseline": {
+    "earnedApprox": 2930,
+    "netProfitApprox": 1000.20,
+    "sold": 330,
+    "remaining": 343,
+    "leftToEarnApprox": 3500
+  },
+  "currentInventory": {
+    "lemonOG": {
+      "acquired": 500,
+      "cost": 3100,
+      "remaining": 245,
+      "smoked": 15,
+      "impliedTotalSold": 240
+    },
+    "blueDream": {
+      "acquired": 200,
+      "cost": 1400,
+      "remaining": 93,
+      "smoked": 12,
+      "impliedTotalSold": 95
+    }
+  },
+  "cumulativeNetThroughDay7Approx": 1168.20,
+  "note": "Day 7 profit is user-confirmed approximate. Missing historical transaction lines and per-strain revenue split are not invented."
+}
