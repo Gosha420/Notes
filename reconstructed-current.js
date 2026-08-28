@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const MARK='goshaReconstructedDay7_20260828_v5';
+const MARK='goshaReconstructedDay7_20260828_v6';
 const TEXT=`LEMON OG 500/3100
 
 Total: €2086.52
@@ -15,32 +15,20 @@ Total: €843.48
 Total sold: 95
 Left: 93
 Smoked: 12`;
-// End-of-Day-6 baseline remains unchanged. Current Lemon 245 is handled by recovered-stats.js
-// as a Day-7 live anchor so yesterday's recovered statistics are not rewritten.
-const STATS={version:1,day:7,completedDays:6,earned:2930,net:1000.2,leftToEarn:3500,sold:330,left:343,smoked:27,day6Net:168,products:[{name:'LEMON OG',acquired:500,spent:3100,sold:235,left:250,smoked:15,total:2086.52},{name:'BLUE DREAM',acquired:200,spent:1400,sold:95,left:93,smoked:12,total:843.48}]};
+const STATS={version:2,day:7,completedDays:6,earned:2930,net:1000.2,leftToEarn:3500,sold:330,left:343,smoked:27,day7Profit:168,products:[{name:'LEMON OG',acquired:500,spent:3100,sold:235,left:250,smoked:15,total:2086.52},{name:'BLUE DREAM',acquired:200,spent:1400,sold:95,left:93,smoked:12,total:843.48}]};
 window.GoshaRecoveredBaseline=STATS;
-function hasLedgerEntries(text){
- const lines=String(text||'').split(/\r?\n/);let inKnown=false;
- for(const line of lines){
-  const t=line.trim();const h=t.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
-  if(h){const name=h[1].trim().toUpperCase();inKnown=name==='LEMON OG'||name==='BLUE DREAM';continue}
-  if(!inKnown||/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left|Smoked|Used)\s*:/i.test(t))continue;
-  if(/\d+(?:\.\d+)?\s*\/\s*\d+(?:\.\d+)?/.test(t))return true;
- }
- return false;
-}
 function install(){
- try{if(!localStorage.getItem('goshaRecoveredCurrentStatsV1'))localStorage.setItem('goshaRecoveredCurrentStatsV1',JSON.stringify(STATS))}catch(_){}
+ try{localStorage.setItem('goshaRecoveredCurrentStatsV1',JSON.stringify(STATS))}catch(_){}
  let done=false;try{done=localStorage.getItem(MARK)==='1'}catch(_){}
  if(done)return;
  const n=document.querySelector('#note');if(!n)return setTimeout(install,100);
- const current=n.value||'',upper=current.toUpperCase(),isSameBatch=upper.includes('LEMON OG 500/3100')&&upper.includes('BLUE DREAM 200/1400');
- // Never replace a surviving live ledger. Existing Day-7 entries always win.
- if(isSameBatch&&hasLedgerEntries(current)){
+ const current=n.value||'';
+ // Recovery must never replace any surviving notebook. Only seed when the notebook is truly blank.
+ if(current.trim()){
   try{localStorage.setItem(MARK,'1')}catch(_){}
   return;
  }
- try{localStorage.setItem('goshaBeforeDay7ReconstructionV5',current)}catch(_){}
+ try{localStorage.setItem('goshaBeforeDay7ReconstructionV6',current)}catch(_){}
  n.value=TEXT;
  try{localStorage.setItem('goshaNoteV21',TEXT);localStorage.setItem('goshaNote',TEXT);localStorage.setItem(MARK,'1')}catch(_){}
  n.dispatchEvent(new Event('input',{bubbles:true}));
