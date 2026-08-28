@@ -1,27 +1,23 @@
-RECOVERED / RECONSTRUCTED CHECKPOINT — DAY 7 — 2026-08-28
-DO NOT TREAT UNKNOWN TRANSACTIONS AS RECOVERED FACTS.
-
 LEMON OG 500/3100
+
+Total: €—
+Total sold: 235
+Left: 250
 Smoked: 15
-Remembered/provisional left: 250
-Exact Lemon OG remaining amount: UNKNOWN — replace 250 when established.
+
 
 BLUE DREAM 200/1400
+
+Total: €—
+Total sold: 95
+Left: 93
 Smoked: 12
-Remembered left: ~93
-Implied sold if Left excludes smoked: ~95 (200 - 93 - 12). This is derived, not directly remembered.
 
-CURRENT LEMON OG + BLUE DREAM BATCH — REMEMBERED TOTALS
-Day: 7 now
-By end of Day 6 / yesterday:
-Gross earned: ~€2930
-Net profit: ~€1000.20
+
+BATCH TOTALS — DAY 7
+Total earned: ~€2930
+Profit: ~€1000.20
 Left to earn: ~€3500
-Yesterday / Day 6 profit: ~€168 (memory approximate)
-Other days were roughly ~€200/day (memory approximate)
+Yesterday / Day 6 profit: ~€168
 
-IMPORTANT
-€1000.20 is remembered as profit from THIS Lemon OG + Blue Dream batch only. It does NOT include the previous Pineapple OG + Blue Dream batch.
-The previous Pineapple OG + Blue Dream batch ended on the same calendar day this batch began and had made over €2000.
-
-This file is an off-device GitHub recovery checkpoint created from remembered information after the original runtime notebook save was lost. No missing transaction lines have been invented.
+NOTE: Lemon left 250 is provisional. Per-strain earned totals and missing transaction lines are unknown, so they are not fabricated here.
