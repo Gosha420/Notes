@@ -1,0 +1,15 @@
+{
+  "day": 7,
+  "completedDays": 6,
+  "earned": 2930,
+  "net": 1000.2,
+  "leftToEarn": 3500,
+  "sold": 330,
+  "left": 343,
+  "smoked": 27,
+  "day6Net": 168,
+  "products": [
+    {"name":"LEMON OG","acquired":500,"spent":3100,"sold":235,"left":250,"smoked":15,"total":2086.52},
+    {"name":"BLUE DREAM","acquired":200,"spent":1400,"sold":95,"left":93,"smoked":12,"total":843.48}
+  ]
+}
