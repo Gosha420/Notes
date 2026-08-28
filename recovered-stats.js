@@ -13,6 +13,8 @@ const BASE={
   'BLUE DREAM':{name:'BLUE DREAM',acquired:200,spent:1400,sold:95,left:93,smoked:12,total:843.48}
  }
 };
+const LEMON_CURRENT_LEFT=245;
+const LEMON_ANCHOR_KEY='goshaLemon245Anchor_20260828_v1';
 const TARGET_PER_LEFT=BASE.left?BASE.leftToEarn/BASE.left:0;
 let queued=false,observer=null,syncing=false,selectedDay=7;
 
@@ -21,6 +23,14 @@ function hasOtherBatches(){
 }
 function isCurrentNote(){const n=$('#note');if(!n)return false;const t=n.value.toUpperCase();return t.includes('LEMON OG 500/3100')&&t.includes('BLUE DREAM 200/1400')}
 function pairs(s){return [...String(s||'').matchAll(/(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/g)].map(m=>({qty:+m[1],price:+m[2]}))}
+function lemonAnchor(parsedSold,smoked){
+ let a=null;try{a=JSON.parse(localStorage.getItem(LEMON_ANCHOR_KEY)||'null')}catch(_){}
+ if(!a||!Number.isFinite(+a.parsedSold)||!Number.isFinite(+a.smoked)){
+  a={parsedSold:+parsedSold||0,smoked:+smoked||BASE.products['LEMON OG'].smoked,createdAt:Date.now()};
+  try{localStorage.setItem(LEMON_ANCHOR_KEY,JSON.stringify(a))}catch(_){}
+ }
+ return a;
+}
 
 function live(){
  const n=$('#note');if(!n)return null;
@@ -30,7 +40,7 @@ function live(){
   const h=t.match(/^(.+?)\s+(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)\s*$/);
   if(h&&/[A-Za-zÀ-ž]/.test(h[1])){
    const name=h[1].trim().toUpperCase();
-   cur=BASE.products[name]?{name,smoked:BASE.products[name].smoked,sold:0,earned:0,tx:0}:null;
+   cur=BASE.products[name]?{name,smoked:BASE.products[name].smoked,parsedSold:0,earned:0,tx:0}:null;
    if(cur)out.products[name]=cur;
    continue;
   }
@@ -38,18 +48,35 @@ function live(){
   const sm=t.match(/^(?:smoked|used)\s*:?\s*(\d+(?:\.\d+)?)/i);
   if(sm){cur.smoked=+sm[1];continue}
   if(/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left)\s*:/i.test(t))continue;
-  for(const x of pairs(line)){cur.sold+=x.qty;cur.earned+=x.price;cur.tx++}
+  for(const x of pairs(line)){cur.parsedSold+=x.qty;cur.earned+=x.price;cur.tx++}
  }
  for(const name of Object.keys(BASE.products)){
-  const b=BASE.products[name],p=out.products[name]||{name,smoked:b.smoked,sold:0,earned:0,tx:0};out.products[name]=p;
-  const cost=b.spent/b.acquired,sd=Math.max(0,p.smoked-b.smoked);
-  out.sold+=p.sold;out.earned+=p.earned;out.net+=p.earned-p.sold*cost;out.tx+=p.tx;out.smokedDelta+=sd;
-  p.smokedDelta=sd;p.liveNet=p.earned-p.sold*cost;p.total=b.total+p.earned;p.totalSold=b.sold+p.sold;p.left=Math.max(0,b.left-p.sold-sd);p.totalSmoked=b.smoked+sd;
+  const b=BASE.products[name],p=out.products[name]||{name,smoked:b.smoked,parsedSold:0,earned:0,tx:0};out.products[name]=p;
+  const cost=b.spent/b.acquired;
+  if(name==='LEMON OG'){
+   const a=lemonAnchor(p.parsedSold,p.smoked);
+   const futureSold=Math.max(0,p.parsedSold-(+a.parsedSold||0));
+   const futureSmoke=Math.max(0,p.smoked-(+a.smoked||b.smoked));
+   p.left=Math.max(0,LEMON_CURRENT_LEFT-futureSold-futureSmoke);
+   p.totalSmoked=p.smoked;
+   p.totalSold=Math.max(0,b.acquired-p.left-p.totalSmoked);
+   p.sold=Math.max(0,p.totalSold-b.sold);
+   p.smokedDelta=Math.max(0,p.totalSmoked-b.smoked);
+  }else{
+   p.sold=p.parsedSold;
+   p.smokedDelta=Math.max(0,p.smoked-b.smoked);
+   p.totalSmoked=b.smoked+p.smokedDelta;
+   p.totalSold=b.sold+p.sold;
+   p.left=Math.max(0,b.left-p.sold-p.smokedDelta);
+  }
+  p.liveNet=p.earned-p.sold*cost;
+  p.total=b.total+p.earned;
+  out.sold+=p.sold;out.earned+=p.earned;out.net+=p.liveNet;out.tx+=p.tx;out.smokedDelta+=p.smokedDelta;
  }
  out.totalEarned=BASE.earned+out.earned;
- out.totalSold=BASE.sold+out.sold;
+ out.totalSold=Object.values(out.products).reduce((a,p)=>a+p.totalSold,0);
  out.totalNet=BASE.net+out.net;
- out.totalLeft=Math.max(0,BASE.left-out.sold-out.smokedDelta);
+ out.totalLeft=Object.values(out.products).reduce((a,p)=>a+p.left,0);
  out.leftToEarn=Math.max(0,out.totalLeft*TARGET_PER_LEFT);
  return out;
 }
@@ -95,7 +122,6 @@ function render(){
  const d=live();if(!d)return;
  const m=mode(),day=$('#dashDaySelect');if(day)day.textContent='DAY '+selectedDay+' / 50';
  const prev=$('#dashPrevDay'),next=$('#dashNextDay');if(m==='day'){if(prev)prev.disabled=selectedDay<=1;if(next)next.disabled=selectedDay>=7}
-
  if(m==='day'){
   if(selectedDay===7){setTop({earned:d.earned,sold:d.sold,net:d.net,tx:d.tx,avg:d.sold?d.earned/d.sold:0,left:d.totalLeft,leftToEarn:d.leftToEarn,label:'DAY 7 SIGNAL',delta:'TODAY',headerTx:d.tx+' TX'})}
   else if(selectedDay===6){setTop({earned:null,sold:null,net:BASE.day6Net,tx:null,avg:null,left:BASE.left,leftToEarn:BASE.leftToEarn,label:'DAY 6 SIGNAL',delta:'RECOVERED NET',headerTx:'— TX'})}
@@ -115,7 +141,7 @@ function cleanAndSyncNotebook(){
  for(let z=heads.length-1;z>=0;z--){
   const h=heads[z],end=z+1<heads.length?heads[z+1].i:out.length,p=d.products[h.name];if(!p)continue;
   const body=out.slice(h.i+1,end).filter(l=>!/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left|Smoked|Used)\s*:/i.test(l));while(body.length&&body[body.length-1].trim()==='')body.pop();
-  out.splice(h.i,end-h.i,out[h.i],...body,'',`Total: €${fmt(p.total)}`,`Total sold: ${fmt(p.totalSold)}`,`Left: ${fmt(p.left)}`,`Smoked: ${fmt(p.smoked)}`,...(z<heads.length-1?['','']:[]));
+  out.splice(h.i,end-h.i,out[h.i],...body,'',`Total: €${fmt(p.total)}`,`Total sold: ${fmt(p.totalSold)}`,`Left: ${fmt(p.left)}`,`Smoked: ${fmt(p.totalSmoked)}`,...(z<heads.length-1?['','']:[]));
  }
  const nextText=out.join('\n');if(nextText===n.value)return;syncing=true;n.value=nextText;
  try{localStorage.setItem('goshaNoteV21',nextText);localStorage.setItem('goshaNote',nextText)}catch(_){}
