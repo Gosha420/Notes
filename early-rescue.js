@@ -23,7 +23,7 @@ function walk(source,v,depth=0,objects=new WeakSet()){
  for(const [k,x] of Object.entries(v))walk(source+'.'+k,x,depth+1,objects);
 }
 function scanStorage(store,name){try{for(let i=0;i<store.length;i++){const k=store.key(i);if(k)walk(name+':'+k,store.getItem(k))}}catch(_){}}
-function nativeScan(){try{if(window.AndroidVault){if(typeof AndroidVault.load==='function')walk('NATIVE:notebook',AndroidVault.load());if(typeof AndroidVault.loadArchive==='function')walk('NATIVE:archive',AndroidVault.loadArchive())}}catch(_){}}
+function nativeScan(){try{if(window.AndroidVault){if(typeof AndroidVault.load==='function')walk('NATIVE:notebook',AndroidVault.load());if(typeof AndroidVault.loadPrevious==='function')walk('NATIVE:notebook_previous',AndroidVault.loadPrevious());if(typeof AndroidVault.loadArchive==='function')walk('NATIVE:archive',AndroidVault.loadArchive())}}catch(_){}}
 function openDb(name){return new Promise(resolve=>{try{const r=indexedDB.open(name);r.onsuccess=()=>resolve(r.result);r.onerror=()=>resolve(null);r.onblocked=()=>resolve(null)}catch(_){resolve(null)}})}
 async function scanDb(name){const db=await openDb(name);if(!db)return;try{for(const store of [...db.objectStoreNames]){await new Promise(resolve=>{try{const tx=db.transaction(store,'readonly'),r=tx.objectStore(store).getAll();r.onsuccess=()=>{walk('IDB:'+name+'/'+store,r.result);resolve()};r.onerror=()=>resolve()}catch(_){resolve()}})}}finally{try{db.close()}catch(_){}}}
 async function scanIdb(){const names=new Set(['GoshaNotebookVault','GoshaBatchArchive']);try{if(indexedDB.databases){for(const d of await indexedDB.databases())if(d&&d.name)names.add(d.name)}}catch(_){}for(const n of names)await scanDb(n)}
