@@ -32,6 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String APP_HOST = "gosha420.github.io";
     private static final String VAULT_PREFS = "gosha_native_vault";
     private static final String VAULT_PAYLOAD = "notebook_payload";
+    private static final String VAULT_PREVIOUS_PAYLOAD = "notebook_payload_previous";
     private static final String ARCHIVE_PAYLOAD = "batch_archive_payload";
     private static final String UPDATE_URL_PREFIX = "https://github.com/Gosha420/Notes/releases/download/android-latest/";
 
@@ -44,8 +45,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean updateReceiverRegistered = false;
 
     private final BroadcastReceiver updateReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
+        @Override public void onReceive(Context context, Intent intent) {
             if (!DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(intent.getAction())) return;
             long id = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1L);
             if (id != updateDownloadId) return;
@@ -54,8 +54,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     @SuppressLint({"SetJavaScriptEnabled", "AddJavascriptInterface"})
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         vaultPreferences = getSharedPreferences(VAULT_PREFS, MODE_PRIVATE);
         webView = new WebView(this);
@@ -68,8 +67,7 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowContentAccess(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+            @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 String host = request.getUrl().getHost();
                 return host == null || !APP_HOST.equalsIgnoreCase(host);
             }
@@ -83,33 +81,24 @@ public class MainActivity extends AppCompatActivity {
 
     private void prepareBiometricPrompt() {
         Executor executor = ContextCompat.getMainExecutor(this);
-        biometricPrompt = new BiometricPrompt(this, executor,
-                new BiometricPrompt.AuthenticationCallback() {
-                    @Override
-                    public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
-                        super.onAuthenticationSucceeded(result);
-                        authRunning = false;
-                        webView.evaluateJavascript("window.goshaBiometricResult && window.goshaBiometricResult(true)", null);
-                    }
-                    @Override
-                    public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
-                        super.onAuthenticationError(errorCode, errString);
-                        authRunning = false;
-                        webView.evaluateJavascript("window.goshaBiometricResult && window.goshaBiometricResult(false)", null);
-                    }
-                    @Override
-                    public void onAuthenticationFailed() {
-                        super.onAuthenticationFailed();
-                        webView.evaluateJavascript("window.goshaBiometricAttemptFailed && window.goshaBiometricAttemptFailed()", null);
-                    }
-                });
-        promptInfo = new BiometricPrompt.PromptInfo.Builder()
-                .setTitle("Unlock GO$HA")
+        biometricPrompt = new BiometricPrompt(this, executor, new BiometricPrompt.AuthenticationCallback() {
+            @Override public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result); authRunning = false;
+                webView.evaluateJavascript("window.goshaBiometricResult && window.goshaBiometricResult(true)", null);
+            }
+            @Override public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString); authRunning = false;
+                webView.evaluateJavascript("window.goshaBiometricResult && window.goshaBiometricResult(false)", null);
+            }
+            @Override public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                webView.evaluateJavascript("window.goshaBiometricAttemptFailed && window.goshaBiometricAttemptFailed()", null);
+            }
+        });
+        promptInfo = new BiometricPrompt.PromptInfo.Builder().setTitle("Unlock GO$HA")
                 .setSubtitle("Verify with your fingerprint or enrolled strong biometric")
                 .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-                .setNegativeButtonText("Cancel")
-                .setConfirmationRequired(false)
-                .build();
+                .setNegativeButtonText("Cancel").setConfirmationRequired(false).build();
     }
 
     private void requestBiometric() {
@@ -117,68 +106,44 @@ public class MainActivity extends AppCompatActivity {
         BiometricManager manager = BiometricManager.from(this);
         int status = manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG);
         if (status != BiometricManager.BIOMETRIC_SUCCESS) {
-            webView.evaluateJavascript("window.goshaBiometricUnavailable && window.goshaBiometricUnavailable(" + status + ")", null);
-            return;
+            webView.evaluateJavascript("window.goshaBiometricUnavailable && window.goshaBiometricUnavailable(" + status + ")", null); return;
         }
-        authRunning = true;
-        biometricPrompt.authenticate(promptInfo);
+        authRunning = true; biometricPrompt.authenticate(promptInfo);
     }
 
     private void beginUpdate(String url) {
-        if (url == null || !url.startsWith(UPDATE_URL_PREFIX)) {
-            notifyUpdateState("error", "Blocked invalid update URL");
-            return;
-        }
+        if (url == null || !url.startsWith(UPDATE_URL_PREFIX)) { notifyUpdateState("error", "Blocked invalid update URL"); return; }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !getPackageManager().canRequestPackageInstalls()) {
-            Intent settingsIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:" + getPackageName()));
-            startActivity(settingsIntent);
-            notifyUpdateState("permission", "Allow GO$HA to install updates, then tap Update again");
-            return;
+            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+            notifyUpdateState("permission", "Allow GO$HA to install updates, then tap Update again"); return;
         }
         try {
             registerUpdateReceiverIfNeeded();
             DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url))
-                    .setTitle("GO$HA update")
-                    .setDescription("Downloading native update")
-                    .setMimeType("application/vnd.android.package-archive")
+            DownloadManager.Request request = new DownloadManager.Request(Uri.parse(url)).setTitle("GO$HA update")
+                    .setDescription("Downloading native update").setMimeType("application/vnd.android.package-archive")
                     .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     .setDestinationInExternalFilesDir(this, Environment.DIRECTORY_DOWNLOADS, "gosha-notes-update.apk");
-            updateDownloadId = manager.enqueue(request);
-            notifyUpdateState("downloading", "Downloading update…");
-        } catch (Exception e) {
-            notifyUpdateState("error", "Update download failed");
-        }
+            updateDownloadId = manager.enqueue(request); notifyUpdateState("downloading", "Downloading update…");
+        } catch (Exception e) { notifyUpdateState("error", "Update download failed"); }
     }
 
     private void registerUpdateReceiverIfNeeded() {
         if (updateReceiverRegistered) return;
         IntentFilter filter = new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
-        } else {
-            registerReceiver(updateReceiver, filter);
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) registerReceiver(updateReceiver, filter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(updateReceiver, filter);
         updateReceiverRegistered = true;
     }
 
     private void openDownloadedUpdate(long id) {
         try {
-            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE);
-            Uri apkUri = manager.getUriForDownloadedFile(id);
-            if (apkUri == null) {
-                notifyUpdateState("error", "Downloaded APK could not be opened");
-                return;
-            }
-            Intent install = new Intent(Intent.ACTION_VIEW)
-                    .setDataAndType(apkUri, "application/vnd.android.package-archive")
-                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(install);
+            DownloadManager manager = (DownloadManager) getSystemService(DOWNLOAD_SERVICE); Uri apkUri = manager.getUriForDownloadedFile(id);
+            if (apkUri == null) { notifyUpdateState("error", "Downloaded APK could not be opened"); return; }
+            startActivity(new Intent(Intent.ACTION_VIEW).setDataAndType(apkUri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK));
             notifyUpdateState("installing", "Android installer opened");
-        } catch (Exception e) {
-            notifyUpdateState("error", "Could not open Android installer");
-        }
+        } catch (Exception e) { notifyUpdateState("error", "Could not open Android installer"); }
     }
 
     private void notifyUpdateState(String state, String message) {
@@ -188,69 +153,33 @@ public class MainActivity extends AppCompatActivity {
         webView.evaluateJavascript("window.goshaUpdateState && window.goshaUpdateState('" + safeState + "','" + safeMessage + "')", null);
     }
 
-    private PackageInfo packageInfo() {
-        try {
-            return getPackageManager().getPackageInfo(getPackageName(), 0);
-        } catch (Exception ignored) {
-            return null;
-        }
-    }
-
-    private final class BiometricBridge {
-        @JavascriptInterface
-        public void authenticate() { runOnUiThread(MainActivity.this::requestBiometric); }
-    }
+    private PackageInfo packageInfo() { try { return getPackageManager().getPackageInfo(getPackageName(), 0); } catch (Exception ignored) { return null; } }
+    private final class BiometricBridge { @JavascriptInterface public void authenticate() { runOnUiThread(MainActivity.this::requestBiometric); } }
 
     private final class VaultBridge {
-        @JavascriptInterface
-        public void save(String payload) {
-            if (payload != null) vaultPreferences.edit().putString(VAULT_PAYLOAD, payload).apply();
+        @JavascriptInterface public void save(String payload) {
+            if (payload == null) return;
+            String old = vaultPreferences.getString(VAULT_PAYLOAD, "");
+            SharedPreferences.Editor e = vaultPreferences.edit();
+            if (old != null && !old.isEmpty() && !old.equals(payload)) e.putString(VAULT_PREVIOUS_PAYLOAD, old);
+            e.putString(VAULT_PAYLOAD, payload).commit();
         }
-        @JavascriptInterface
-        public String load() { return vaultPreferences.getString(VAULT_PAYLOAD, ""); }
-        @JavascriptInterface
-        public void saveArchive(String payload) {
-            if (payload != null) vaultPreferences.edit().putString(ARCHIVE_PAYLOAD, payload).apply();
-        }
-        @JavascriptInterface
-        public String loadArchive() { return vaultPreferences.getString(ARCHIVE_PAYLOAD, ""); }
+        @JavascriptInterface public String load() { return vaultPreferences.getString(VAULT_PAYLOAD, ""); }
+        @JavascriptInterface public String loadPrevious() { return vaultPreferences.getString(VAULT_PREVIOUS_PAYLOAD, ""); }
+        @JavascriptInterface public void saveArchive(String payload) { if (payload != null) vaultPreferences.edit().putString(ARCHIVE_PAYLOAD, payload).commit(); }
+        @JavascriptInterface public String loadArchive() { return vaultPreferences.getString(ARCHIVE_PAYLOAD, ""); }
     }
 
     private final class UpdateBridge {
-        @JavascriptInterface
-        @SuppressWarnings("deprecation")
-        public int getVersionCode() {
-            PackageInfo info = packageInfo();
-            return info == null ? 0 : info.versionCode;
-        }
-
-        @JavascriptInterface
-        public String getVersionName() {
-            PackageInfo info = packageInfo();
-            return info == null || info.versionName == null ? "" : info.versionName;
-        }
-
-        @JavascriptInterface
-        public boolean canInstallUpdates() {
-            return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls();
-        }
-
-        @JavascriptInterface
-        public void install(String url) { runOnUiThread(() -> beginUpdate(url)); }
+        @JavascriptInterface @SuppressWarnings("deprecation") public int getVersionCode() { PackageInfo i=packageInfo(); return i==null?0:i.versionCode; }
+        @JavascriptInterface public String getVersionName() { PackageInfo i=packageInfo(); return i==null||i.versionName==null?"":i.versionName; }
+        @JavascriptInterface public boolean canInstallUpdates() { return Build.VERSION.SDK_INT < Build.VERSION_CODES.O || getPackageManager().canRequestPackageInstalls(); }
+        @JavascriptInterface public void install(String url) { runOnUiThread(() -> beginUpdate(url)); }
     }
 
-    @Override
-    protected void onDestroy() {
-        if (updateReceiverRegistered) {
-            try { unregisterReceiver(updateReceiver); } catch (Exception ignored) { }
-            updateReceiverRegistered = false;
-        }
+    @Override protected void onDestroy() {
+        if (updateReceiverRegistered) { try { unregisterReceiver(updateReceiver); } catch (Exception ignored) { } updateReceiverRegistered = false; }
         super.onDestroy();
     }
-
-    @Override
-    public void onBackPressed() {
-        if (webView != null && webView.canGoBack()) webView.goBack();
-        else super.onBackPressed();
-    }
+    @Override public void onBackPressed() { if (webView != null && webView.canGoBack()) webView.goBack(); else super.onBackPressed(); }
 }
