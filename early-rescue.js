@@ -27,20 +27,20 @@ function nativeScan(){try{if(window.AndroidVault){if(typeof AndroidVault.load===
 function openDb(name){return new Promise(resolve=>{try{const r=indexedDB.open(name);r.onsuccess=()=>resolve(r.result);r.onerror=()=>resolve(null);r.onblocked=()=>resolve(null)}catch(_){resolve(null)}})}
 async function scanDb(name){const db=await openDb(name);if(!db)return;try{for(const store of [...db.objectStoreNames]){await new Promise(resolve=>{try{const tx=db.transaction(store,'readonly'),r=tx.objectStore(store).getAll();r.onsuccess=()=>{walk('IDB:'+name+'/'+store,r.result);resolve()};r.onerror=()=>resolve()}catch(_){resolve()}})}}finally{try{db.close()}catch(_){}}}
 async function scanIdb(){const names=new Set(['GoshaNotebookVault','GoshaBatchArchive']);try{if(indexedDB.databases){for(const d of await indexedDB.databases())if(d&&d.name)names.add(d.name)}}catch(_){}for(const n of names)await scanDb(n)}
-async function scanCaches(){try{if(!('caches'in window))return;for(const n of await caches.keys()){const c=await caches.open(n);for(const req of await c.keys()){try{const r=await c.match(req);if(r)walk('CACHE:'+n+':'+req.url,await r.clone().text())}catch(_){}}}}catch(_){}}
+async function scanCaches(){try{if(!('caches'in window))return;for(const n of await caches.keys()){const c=await caches.open(n);for(const req of await c.keys()){try{const r=await c.match(req);if(r)walk('CACHE:'+n+':'+req.url,await r.clone().text())}catch(_){}}}}catch(_){} }
 async function run(){
  const note=document.querySelector('#note');const current=note?.value||localStorage.getItem('goshaNoteV21')||localStorage.getItem('goshaNote')||'';add('CURRENT',current);
  scanStorage(localStorage,'LOCAL');scanStorage(sessionStorage,'SESSION');nativeScan();
  await Promise.allSettled([scanIdb(),scanCaches()]);
  let best=EXACT(current)?{source:'CURRENT',text:current,score:score(current)}:null;for(const c of found)if(!best||better(c.text,best.text))best=c;
- let restored=false;if(best&&better(best.text,current)){
+ let restored=false;if(!String(current).trim()&&best&&String(best.text).trim()){
   try{localStorage.setItem('goshaRescueUndoBeforeEarlyRestore',current)}catch(_){}
   if(note)note.value=best.text;
   try{localStorage.setItem('goshaNoteV21',best.text);localStorage.setItem('goshaNote',best.text)}catch(_){}
   restored=true;
  }
- try{localStorage.setItem('goshaEarlyRescueReportV1',JSON.stringify({at:Date.now(),current:score(current),best:best?best.score:null,source:best?.source||null,candidates:found.length,restored}))}catch(_){}
- window.GoshaEarlyRescue={restored,bestSource:best?.source||null,bestScore:best?.score||null,candidates:found.length};
+ try{localStorage.setItem('goshaEarlyRescueReportV1',JSON.stringify({at:Date.now(),current:score(current),best:best?best.score:null,source:best?.source||null,candidates:found.length,restored,nonDestructive:true}))}catch(_){}
+ window.GoshaEarlyRescue={restored,bestSource:best?.source||null,bestScore:best?.score||null,candidates:found.length,nonDestructive:true};
  return window.GoshaEarlyRescue;
 }
 window.GoshaEarlyRescuePromise=run().catch(e=>({restored:false,error:String(e)}));
