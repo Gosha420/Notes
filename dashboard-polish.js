@@ -3,7 +3,7 @@
 const $=s=>document.querySelector(s);
 const fmt=n=>new Intl.NumberFormat('en-GB',{maximumFractionDigits:2}).format(Math.round((Number(n)+Number.EPSILON)*100)/100);
 const money=n=>'€'+fmt(n);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#039;'}[c]));
 
 function installStyle(){
  if($('#gosha-polish-style'))return;
@@ -30,7 +30,7 @@ function parseLedger(text){
   if(/^\s*(?:Total(?:\s+earned)?|Total\s+sold|Left)\s*:/i.test(t))continue;
   for(const m of line.matchAll(pairRe)){current.sold+=+m[1];current.earned+=+m[2]}
  }
- for(const p of products){p.left=Math.max(0,p.acquired-p.sold-p.smoked);p.avg=p.sold>0?p.earned/p.sold:0;p.leftToEarn=p.left*p.avg}
+ for(const p of products){const calculated=Math.max(0,p.acquired-p.sold-p.smoked);p.left=window.GoshaInventoryCorrection?.get?.(p.name,calculated)??calculated;p.avg=p.sold>0?p.earned/p.sold:0;p.leftToEarn=p.left*p.avg}
  return products
 }
 function ensureMain(){const stats=$('.dashStats');if(!stats)return null;let box=$('#dashLeftToEarn');if(!box){const wrap=document.createElement('div');wrap.className='dashStat leftEarn';wrap.innerHTML='<small>LEFT TO EARN</small><strong id="dashLeftToEarn">€0</strong>';stats.appendChild(wrap);box=$('#dashLeftToEarn')}return box}
@@ -46,6 +46,6 @@ function render(){
  const mix=$('#allShareRows');if(mix&&ledger.length){for(const row of mix.querySelectorAll('.allShare')){const name=row.querySelector('b')?.textContent?.trim()||'';const p=byName.get(name);if(p)row.title='Remaining '+fmt(p.left)+' · Left to earn '+money(p.leftToEarn)}}
 }
 function schedule(){setTimeout(render,0)}
-function boot(){let tries=0;const go=()=>{if(!$('#goshaDashboard')||!$('#note')){if(tries++<60)setTimeout(go,100);return}render();$('#note').addEventListener('input',schedule,{passive:true});$('#note').addEventListener('change',schedule);$('#goshaDashboard').addEventListener('click',schedule)};go()}
+function boot(){let tries=0;const go=()=>{if(!$('#goshaDashboard')||!$('#note')){if(tries++<60)setTimeout(go,100);return}render();$('#note').addEventListener('input',schedule,{passive:true});$('#note').addEventListener('change',schedule);$('#goshaDashboard').addEventListener('click',schedule);window.addEventListener('gosha-inventory-correction',schedule)};go()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
