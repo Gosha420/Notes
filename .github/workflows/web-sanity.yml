@@ -1,0 +1,53 @@
+name: Web Sanity
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*.js'
+      - 'index.html'
+      - 'manifest.webmanifest'
+      - '.github/workflows/web-sanity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in *.js; do
+            echo "Checking $f"
+            node --check "$f"
+          done
+      - name: Verify index script files exist
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          html = Path('index.html').read_text(encoding='utf-8')
+          srcs = re.findall(r'<script[^>]+src=["\']\.\/([^?"\']+)', html)
+          missing = [src for src in srcs if not Path(src).is_file()]
+          print('Scripts:', ', '.join(srcs))
+          if missing:
+              raise SystemExit('Missing script files: ' + ', '.join(missing))
+      - name: Verify service-worker core files exist
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+          sw = Path('sw.js').read_text(encoding='utf-8')
+          m = re.search(r'const CORE=\[(.*?)\];', sw, re.S)
+          if not m:
+              raise SystemExit('CORE list not found in sw.js')
+          refs = re.findall(r"['\"]\.\/([^?'\"]+)(?:\?[^'\"]*)?['\"]", m.group(1))
+          missing = [ref for ref in refs if not Path(ref).is_file()]
+          print('Core:', ', '.join(refs))
+          if missing:
+              raise SystemExit('Missing CORE files: ' + ', '.join(missing))
