@@ -31,7 +31,7 @@ function critical(text){
  }catch(_){}
  try{if(window.AndroidVault&&typeof AndroidVault.save==='function')AndroidVault.save(JSON.stringify(p))}catch(_){}
  lastText=text;latest=p;replicate();
- const s=document.querySelector('#saveStatus');if(s)s.textContent='SAVED · EVERYWHERE';
+ const s=document.querySelector('#saveStatus');if(s)s.dataset.lastSaved=String(p.updatedAt);
  return p;
 }
 function openDb(){return new Promise((resolve,reject)=>{try{const r=indexedDB.open(DB,1);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(STORE))r.result.createObjectStore(STORE)};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)}catch(e){reject(e)}})}
