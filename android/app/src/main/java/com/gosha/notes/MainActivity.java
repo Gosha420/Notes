@@ -40,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     private BiometricPrompt biometricPrompt;
     private BiometricPrompt.PromptInfo promptInfo;
     private SharedPreferences vaultPreferences;
+    private SecureSavesBridge secureSavesBridge;
     private boolean authRunning = false;
     private long updateDownloadId = -1L;
     private boolean updateReceiverRegistered = false;
@@ -72,9 +73,11 @@ public class MainActivity extends AppCompatActivity {
                 return host == null || !APP_HOST.equalsIgnoreCase(host);
             }
         });
+        secureSavesBridge = new SecureSavesBridge(this, webView);
         webView.addJavascriptInterface(new BiometricBridge(), "AndroidBiometric");
         webView.addJavascriptInterface(new VaultBridge(), "AndroidVault");
         webView.addJavascriptInterface(new UpdateBridge(), "AndroidUpdater");
+        webView.addJavascriptInterface(secureSavesBridge, "AndroidSecureSaves");
         prepareBiometricPrompt();
         webView.loadUrl(APP_URL);
     }
@@ -177,7 +180,15 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface public void install(String url) { runOnUiThread(() -> beginUpdate(url)); }
     }
 
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SecureSavesBridge.PICK_FOLDER_REQUEST && resultCode == RESULT_OK && data != null && secureSavesBridge != null) {
+            secureSavesBridge.handleFolderResult(data.getData());
+        }
+    }
+
     @Override protected void onDestroy() {
+        if (secureSavesBridge != null) secureSavesBridge.shutdown();
         if (updateReceiverRegistered) { try { unregisterReceiver(updateReceiver); } catch (Exception ignored) { } updateReceiverRegistered = false; }
         super.onDestroy();
     }
