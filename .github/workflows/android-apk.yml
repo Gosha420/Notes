@@ -29,8 +29,14 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      # Never silently rotate the signing identity. If this cache disappears,
-      # stop the build and require an explicit signing-key recovery decision.
+      # Compile first so native-code regressions are visible even if the
+      # long-lived APK signing identity needs recovery.
+      - name: Compile native code
+        working-directory: android
+        run: gradle :app:compileDebugJavaWithJavac --stacktrace
+
+      # Never silently rotate the signing identity. A new debug key would
+      # make the APK impossible to install over an existing signed install.
       - name: Restore stable debug signing key
         uses: actions/cache@v4
         with:
