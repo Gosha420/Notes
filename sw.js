@@ -1,5 +1,5 @@
 const CACHE_PREFIX='gosha-notes-';
-const CACHE=CACHE_PREFIX+'v80';
+const CACHE=CACHE_PREFIX+'v81';
 const SHELL='./index.html';
 const CORE=[SHELL,'./early-rescue.js?v=2','./app.js?v=63','./launch-fix.js?v=63','./success-reveal.js?v=63','./vault-loader.js?v=2','./vault.js?v=69','./new-batch-reset.js?v=1','./persistence-hardening.js?v=1','./native-archive-compat.js?v=63','./archive.js?v=65','./inventory-correction.js?v=9','./dashboard.js?v=65','./inclusive-dashboard.js?v=63','./dashboard-polish.js?v=64','./batch-stats.js?v=66','./update.js?v=66','./recovery-forensics.js?v=5','./data-integrity.js?v=1','./app-update.json','./manifest.webmanifest'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting()))});
