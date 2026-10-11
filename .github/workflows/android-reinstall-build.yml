@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/android-reinstall-build.yml'
       - 'android/**'
+      - 'archive.js'
 jobs:
   build:
     runs-on: ubuntu-latest
